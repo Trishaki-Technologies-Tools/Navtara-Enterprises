@@ -1,0 +1,264 @@
+ALTER TABLE: activity_logs
+  ADDED:
+    `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `action` varchar(100) NOT NULL,
+    `description` text DEFAULT NULL,
+    `ip_address` varchar(45) DEFAULT NULL,
+
+ALTER TABLE: brands
+  ADDED:
+    `supplier_id` int(11) DEFAULT NULL,
+    `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `logo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  REMOVED:
+    `name` varchar(100) NOT NULL,
+    `logo` varchar(255) DEFAULT NULL,
+    `description` text DEFAULT NULL,
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+
+ALTER TABLE: customer_ledger
+  ADDED:
+    `transaction_type` enum('Invoice','Payment','Opening Balance','Adjustment') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `reference_type` enum('Invoices','Payments','None') COLLATE utf8mb4_unicode_ci DEFAULT 'None',
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `transaction_type` enum('Invoice','Payment','Opening Balance','Adjustment') NOT NULL,
+    `reference_type` enum('Invoices','Payments','None') DEFAULT 'None',
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: expenses
+  ADDED:
+    `category` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `paid_to` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Cash'
+  REMOVED:
+    `category` varchar(100) NOT NULL,
+    `paid_to` varchar(100) DEFAULT NULL,
+    `remarks` text DEFAULT NULL,
+    `payment_method` varchar(50) NOT NULL DEFAULT 'Cash'
+
+ALTER TABLE: inventory_history
+  ADDED:
+    `transaction_type` enum('Opening Stock','Stock Addition','Stock Reduction','Manual Adjustment','Purchase Entry','Invoice Reduction') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `reference_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `transaction_type` enum('Opening Stock','Stock Addition','Stock Reduction','Manual Adjustment','Purchase Entry','Invoice Reduction') NOT NULL,
+    `reference_type` varchar(50) DEFAULT NULL,
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: invoices
+  ADDED:
+    `invoice_number` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `invoice_type` enum('GST Invoice','Non GST Invoice','Cash Invoice','Credit Invoice') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `company_details` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `retailer_details` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `payment_status` enum('Unpaid','Partially Paid','Paid') COLLATE utf8mb4_unicode_ci DEFAULT 'Unpaid',
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `invoice_number` varchar(50) NOT NULL,
+    `invoice_type` enum('GST Invoice','Non GST Invoice','Cash Invoice','Credit Invoice') NOT NULL,
+    `company_details` text DEFAULT NULL,
+    `retailer_details` text DEFAULT NULL,
+    `payment_status` enum('Unpaid','Partially Paid','Paid') DEFAULT 'Unpaid',
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: invoice_items
+  ADDED:
+    `sku_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  REMOVED:
+    `sku_name` varchar(150) NOT NULL,
+    `sku_code` varchar(50) NOT NULL,
+
+ALTER TABLE: orders
+  ADDED:
+    `status` enum('Pending','Approved','Processing','Completed','Cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'Pending',
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `status` enum('Pending','Approved','Processing','Completed','Cancelled') DEFAULT 'Pending',
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: payments
+  ADDED:
+    `payment_type` enum('Partial Payment','Full Payment','Advance Payment','Credit Adjustment') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `payment_method` enum('Cash','UPI','Bank Transfer','Cheque','Card','NEFT','RTGS','IMPS') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `reference_number` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `payment_type` enum('Partial Payment','Full Payment','Advance Payment','Credit Adjustment') NOT NULL,
+    `payment_method` enum('Cash','UPI','Bank Transfer','Cheque','Card','NEFT','RTGS','IMPS') NOT NULL,
+    `reference_number` varchar(100) DEFAULT NULL,
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: products
+  ADDED:
+    `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `hsn_code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  REMOVED:
+    `name` varchar(150) NOT NULL,
+    `description` text DEFAULT NULL,
+    `hsn_code` varchar(20) DEFAULT NULL,
+    `image` varchar(255) DEFAULT NULL,
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+
+ALTER TABLE: purchases
+  ADDED:
+    `supplier_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `supplier_invoice` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `supplier_name` varchar(150) NOT NULL,
+    `supplier_invoice` varchar(100) NOT NULL,
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: retailers
+  ADDED:
+    `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `owner_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `shop_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `gst_number` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `mobile` varchar(15) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `alternate_mobile` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `address` text COLLATE utf8mb4_unicode_ci NOT NULL,
+    `area` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `city` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `state` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Goa',
+    `pin_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `google_map_link` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `business_type` enum('Distributor','Wholesaler','Retail Shop','Medical','Super Market','General Store') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Retail Shop',
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+    `visit_frequency` enum('Daily','Weekly','Bi-Weekly','Monthly') COLLATE utf8mb4_unicode_ci DEFAULT 'Weekly',
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `name` varchar(100) NOT NULL,
+    `owner_name` varchar(100) DEFAULT NULL,
+    `shop_name` varchar(150) NOT NULL,
+    `gst_number` varchar(15) DEFAULT NULL,
+    `mobile` varchar(15) NOT NULL,
+    `alternate_mobile` varchar(15) DEFAULT NULL,
+    `email` varchar(100) DEFAULT NULL,
+    `address` text NOT NULL,
+    `area` varchar(100) NOT NULL,
+    `city` varchar(50) NOT NULL,
+    `state` varchar(50) NOT NULL DEFAULT 'Goa',
+    `pin_code` varchar(10) NOT NULL,
+    `google_map_link` text DEFAULT NULL,
+    `business_type` enum('Distributor','Wholesaler','Retail Shop','Medical','Super Market','General Store') NOT NULL DEFAULT 'Retail Shop',
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+    `visit_frequency` enum('Daily','Weekly','Bi-Weekly','Monthly') DEFAULT 'Weekly',
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: retailer_timeline
+  ADDED:
+    `visit_status` enum('Visited - Order Taken','Visited - No Order','Visited - Payment Collected','Called Retailer','Closed') COLLATE utf8mb4_unicode_ci DEFAULT 'Visited - No Order',
+    `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `visit_status` enum('Visited - Order Taken','Visited - No Order','Visited - Payment Collected','Called Retailer','Closed') DEFAULT 'Visited - No Order',
+    `remarks` text DEFAULT NULL,
+
+ALTER TABLE: roles
+  ADDED:
+    `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `name` varchar(50) NOT NULL,
+    `description` varchar(255) DEFAULT NULL,
+
+ALTER TABLE: route_schedules
+  ADDED:
+    `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+    `notes` varchar(255) DEFAULT NULL,
+
+ALTER TABLE: sales_staff_details
+  ADDED:
+    `route_id` int(11) DEFAULT NULL,
+    `assigned_area` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `assigned_area` varchar(100) DEFAULT NULL,
+
+ALTER TABLE: settings
+  ADDED:
+    `key_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `val_value` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `key_name` varchar(100) NOT NULL,
+    `val_value` text DEFAULT NULL,
+
+ALTER TABLE: skus
+  ADDED:
+    `sku_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `unit` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pcs',
+    `weight` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `size` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  REMOVED:
+    `sku_name` varchar(100) NOT NULL,
+    `sku_code` varchar(50) NOT NULL,
+    `unit` varchar(20) NOT NULL DEFAULT 'Pcs',
+    `weight` varchar(20) DEFAULT NULL,
+    `size` varchar(20) DEFAULT NULL,
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+
+ALTER TABLE: sku_discounts
+  ADDED:
+    `discount_type` enum('Quantity Slab','Flat Rate') COLLATE utf8mb4_unicode_ci NOT NULL,
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  REMOVED:
+    `discount_type` enum('Quantity Slab','Flat Rate') NOT NULL,
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+
+ALTER TABLE: suppliers
+  ADDED:
+    `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `gst_number` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `address` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `fssai_license` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `acc_number` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `bank_branch` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `bank_place` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `acc_holder` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `payment_mode` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  REMOVED:
+    `name` varchar(150) NOT NULL,
+    `gst_number` varchar(15) DEFAULT NULL,
+    `address` text DEFAULT NULL,
+    `fssai_license` varchar(50) DEFAULT NULL,
+    `acc_number` varchar(50) DEFAULT NULL,
+    `bank_branch` varchar(100) DEFAULT NULL,
+    `bank_place` varchar(100) DEFAULT NULL,
+    `acc_holder` varchar(150) DEFAULT NULL,
+    `payment_mode` varchar(50) DEFAULT NULL,
+
+ALTER TABLE: users
+  ADDED:
+    `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `fullname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `mobile` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `photo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  REMOVED:
+    `username` varchar(50) NOT NULL,
+    `password_hash` varchar(255) NOT NULL,
+    `fullname` varchar(100) NOT NULL,
+    `email` varchar(100) DEFAULT NULL,
+    `mobile` varchar(15) DEFAULT NULL,
+    `photo` varchar(255) DEFAULT NULL,
+    `status` enum('Active','Inactive') DEFAULT 'Active',
+

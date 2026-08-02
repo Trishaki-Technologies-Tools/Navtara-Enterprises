@@ -1,0 +1,40 @@
+ALTER TABLE: brands
+  ADDED:
+    `supplier_id` int(11) DEFAULT NULL,
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  REMOVED:
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+    `supplier_id` int(11) DEFAULT NULL
+
+ALTER TABLE: orders
+  ADDED:
+    `order_mode` varchar(20) DEFAULT 'By Route',
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  REMOVED:
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+    `order_mode` varchar(20) DEFAULT 'By Route'
+
+ALTER TABLE: purchases
+  ADDED:
+    `discount_amount` decimal(12,2) DEFAULT 0.00,
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  REMOVED:
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+    `discount_amount` decimal(12,2) DEFAULT 0.00
+
+ALTER TABLE: purchase_items
+  ADDED:
+    `discount_amount` decimal(10,2) DEFAULT 0.00,
+    `total_amount` decimal(12,2) NOT NULL
+  REMOVED:
+    `total_amount` decimal(12,2) NOT NULL,
+    `discount_amount` decimal(10,2) DEFAULT 0.00
+
+ALTER TABLE: sales_staff_details
+  ADDED:
+    `route_id` int(11) DEFAULT NULL,
+    `joining_date` date DEFAULT NULL
+  REMOVED:
+    `joining_date` date DEFAULT NULL,
+    `route_id` int(11) DEFAULT NULL
+
