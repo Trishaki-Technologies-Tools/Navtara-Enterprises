@@ -2451,10 +2451,10 @@ $(document).ready(function () {
                         }
                     }
                 });
+                // Update item discount only if rules exist
+                item.discount = bestDiscount;
             }
             
-            // Update item discount
-            item.discount = bestDiscount;
             
             const itemPriceAfterDiscount = item.price - item.discount;
             const rowSubtotal = itemPriceAfterDiscount * item.quantity;
@@ -4370,7 +4370,7 @@ $(document).ready(function () {
                                 price: parseFloat(i.price),
                                 gst_pct: parseFloat(i.gst_percentage),
                                 quantity: parseInt(i.quantity),
-                                discount: parseFloat(i.discount_amount),
+                                discount: parseInt(i.quantity) > 0 ? parseFloat(i.discount_amount) / parseInt(i.quantity) : 0,
                                 discount_rules: []
                             }));
                             renderOrderCartTable();
