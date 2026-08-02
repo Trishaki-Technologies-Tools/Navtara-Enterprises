@@ -35,6 +35,7 @@
                         <th class="text-end">Purchase <br><small class="text-secondary fw-normal">(Excl GST)</small></th>
                         <?php endif; ?>
                         <th class="text-end">Selling <br><small class="text-secondary fw-normal">(Excl GST)</small></th>
+                        <th class="text-end">Selling <br><small class="text-secondary fw-normal">(Incl GST)</small></th>
                         <th class="text-end">MRP</th>
                         <th>Unit</th>
                         <th class="text-center">Stock</th>

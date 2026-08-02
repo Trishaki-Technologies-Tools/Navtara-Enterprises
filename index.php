@@ -295,6 +295,7 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                                     <th>SKU Code</th>
                                     <th class="text-end">Qty</th>
                                     <th class="text-end">Rate (excl. Tax) (₹)</th>
+                                    <th class="text-end">Discount (₹)</th>
                                     <th class="text-center">GST %</th>
                                     <th class="text-end">GST Paid (₹)</th>
                                     <th class="text-end">Total Amount (₹)</th>
@@ -307,6 +308,7 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                                 <tr class="fw-bold bg-dark text-white">
                                     <td colspan="3" class="text-end">Total Summary:</td>
                                     <td class="text-end text-info" id="detail-pur-total-subtotal">₹0.00</td>
+                                    <td class="text-end text-danger" id="detail-pur-total-discount">₹0.00</td>
                                     <td></td>
                                     <td class="text-end text-warning" id="detail-pur-total-gst">₹0.00</td>
                                     <td class="text-end text-success" id="detail-pur-total-grand">₹0.00</td>

@@ -23,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     SELECT r.*, 
                            rt.route_name, 
                            (SELECT GROUP_CONCAT(DISTINCT u.fullname SEPARATOR ', ') 
-                            FROM route_schedules rs2 JOIN users u ON rs2.staff_id = u.id 
-                            WHERE rs2.route_id = rt.id) as staff_names
+                            FROM staff_routes sr JOIN users u ON sr.user_id = u.id 
+                            WHERE sr.route_id = rt.id) as staff_names
                     FROM retailers r 
                     LEFT JOIN route_retailers rr ON r.id = rr.retailer_id
                     LEFT JOIN routes rt ON rr.route_id = rt.id
@@ -42,13 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     SELECT DISTINCT r.*, 
                            rt.route_name, 
                            (SELECT GROUP_CONCAT(DISTINCT u.fullname SEPARATOR ', ') 
-                            FROM route_schedules rs2 JOIN users u ON rs2.staff_id = u.id 
-                            WHERE rs2.route_id = rt.id) as staff_names
+                            FROM staff_routes sr2 JOIN users u ON sr2.user_id = u.id 
+                            WHERE sr2.route_id = rt.id) as staff_names
                     FROM retailers r 
                     JOIN route_retailers rr ON r.id = rr.retailer_id
                     JOIN routes rt ON rr.route_id = rt.id
-                    JOIN route_schedules rs ON rr.route_id = rs.route_id
-                    WHERE rs.staff_id = ?
+                    JOIN staff_routes sr ON rr.route_id = sr.route_id
+                    WHERE sr.user_id = ?
                 ";
                 $params = [$userId];
                 if ($route_id) {
@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     SELECT DISTINCT r.*, rr.route_id 
                     FROM retailers r 
                     JOIN route_retailers rr ON r.id = rr.retailer_id 
-                    JOIN route_schedules rs ON rr.route_id = rs.route_id
-                    WHERE r.id = ? AND rs.staff_id = ?
+                    JOIN staff_routes sr ON rr.route_id = sr.route_id
+                    WHERE r.id = ? AND sr.user_id = ?
                 ");
                 $stmt->execute([$id, $userId]);
             }
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Validate staff can only assign routes assigned to them
         if ($route_id && $roleName !== 'Owner') {
-            $chkRoute = $db->prepare("SELECT COUNT(*) FROM route_schedules WHERE staff_id = ? AND route_id = ?");
+            $chkRoute = $db->prepare("SELECT COUNT(*) FROM staff_routes WHERE user_id = ? AND route_id = ?");
             $chkRoute->execute([$userId, $route_id]);
             if ($chkRoute->fetchColumn() == 0) {
                 sendJSON('error', 'You can only assign routes that are scheduled to you.');
@@ -224,8 +224,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $chk = $db->prepare("
                 SELECT COUNT(*) 
                 FROM route_retailers rr 
-                JOIN route_schedules rs ON rr.route_id = rs.route_id 
-                WHERE rr.retailer_id = ? AND rs.staff_id = ?
+                JOIN staff_routes sr ON rr.route_id = sr.route_id 
+                WHERE rr.retailer_id = ? AND sr.user_id = ?
             ");
             $chk->execute([$id, $userId]);
             if ($chk->fetchColumn() == 0) {
@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // Also validate route belongs to this staff member
             if ($route_id) {
-                $chkRoute = $db->prepare("SELECT COUNT(*) FROM route_schedules WHERE staff_id = ? AND route_id = ?");
+                $chkRoute = $db->prepare("SELECT COUNT(*) FROM staff_routes WHERE user_id = ? AND route_id = ?");
                 $chkRoute->execute([$userId, $route_id]);
                 if ($chkRoute->fetchColumn() == 0) {
                     sendJSON('error', 'You can only assign routes that are scheduled to you.');
@@ -352,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Verify staff access to retailer
         if ($roleName !== 'Owner') {
-            $chk = $db->prepare("SELECT COUNT(*) FROM retailers WHERE id = ? AND assigned_staff_id = ?");
+            $chk = $db->prepare("SELECT COUNT(*) FROM route_retailers rr JOIN staff_routes sr ON rr.route_id = sr.route_id WHERE rr.retailer_id = ? AND sr.user_id = ?");
             $chk->execute([$retailer_id, $userId]);
             if ($chk->fetchColumn() == 0) {
                 sendJSON('error', 'Access denied.');

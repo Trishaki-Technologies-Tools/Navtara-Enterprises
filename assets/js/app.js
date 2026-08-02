@@ -748,6 +748,7 @@ $(document).ready(function () {
                                 <td><strong>${item.sku_name}</strong></td>
                                 ${purchaseHtml}
                                 <td class="text-end fw-bold text-success">${formatRupees(item.selling_price)}</td>
+                                <td class="text-end fw-bold text-primary">${formatRupees(parseFloat(item.selling_price) * (1 + parseFloat(item.gst_percentage || 0) / 100))}</td>
                                 <td class="text-end text-info">${formatRupees(item.mrp)}</td>
                                 <td>${item.unit}</td>
                                 <td class="text-center ${stockColor}">${item.current_stock} <small class="text-secondary">/ Min:${item.minimum_stock}</small></td>
@@ -1240,6 +1241,7 @@ $(document).ready(function () {
                     
                     res.data.forEach(function (pur) {
                         const sub = parseFloat(pur.subtotal) || 0;
+                        const disc = parseFloat(pur.discount_amount) || 0;
                         const gst = parseFloat(pur.gst_amount) || 0;
                         const grand = parseFloat(pur.grand_total) || 0;
                         
@@ -1249,6 +1251,7 @@ $(document).ready(function () {
                                 <td><span class="badge bg-secondary px-2">${pur.supplier_invoice}</span></td>
                                 <td><strong>${pur.supplier_name}</strong></td>
                                 <td class="text-end font-monospace">${formatRupees(sub)}</td>
+                                <td class="text-end font-monospace text-danger">${formatRupees(disc)}</td>
                                 <td class="text-end font-monospace text-warning">${formatRupees(gst)}</td>
                                 <td class="text-end font-monospace text-success">${formatRupees(grand)}</td>
                                 <td><span class="small text-white-50">${pur.remarks || 'N/A'}</span></td>
@@ -1291,6 +1294,7 @@ $(document).ready(function () {
                     tbody.empty();
                     
                     let totalSubtotal = 0;
+                    let totalDiscount = 0;
                     let totalGst = 0;
                     let totalGrand = 0;
                     
@@ -1300,10 +1304,12 @@ $(document).ready(function () {
                         const gstPct = parseFloat(item.gst_percentage) || 0;
                         
                         const itemSubtotal = qty * price;
+                        const itemDisc = parseFloat(item.discount_amount) || 0;
                         const itemGst = parseFloat(item.gst_amount) || 0;
                         const itemTotal = parseFloat(item.total_amount) || 0;
                         
                         totalSubtotal += itemSubtotal;
+                        totalDiscount += itemDisc;
                         totalGst += itemGst;
                         totalGrand += itemTotal;
                         
@@ -1313,6 +1319,7 @@ $(document).ready(function () {
                                 <td><span class="small font-monospace text-white-50">${item.sku_code}</span></td>
                                 <td class="text-end">${qty}</td>
                                 <td class="text-end font-monospace">${formatRupees(price)}</td>
+                                <td class="text-end font-monospace text-danger">${formatRupees(itemDisc)}</td>
                                 <td class="text-center font-monospace">${gstPct}%</td>
                                 <td class="text-end font-monospace text-warning">${formatRupees(itemGst)}</td>
                                 <td class="text-end font-monospace text-success">${formatRupees(itemTotal)}</td>
@@ -1321,6 +1328,7 @@ $(document).ready(function () {
                     });
                     
                     $('#detail-pur-total-subtotal').text(formatRupees(totalSubtotal));
+                    $('#detail-pur-total-discount').text(formatRupees(totalDiscount));
                     $('#detail-pur-total-gst').text(formatRupees(totalGst));
                     $('#detail-pur-total-grand').text(formatRupees(totalGrand));
                     
@@ -1952,7 +1960,6 @@ $(document).ready(function () {
                                 <td>${item.joining_date}</td>
                                 <td>${badge}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-warning me-1 btn-staff-schedule" data-id="${item.id}" data-name="${item.fullname}" title="Schedule Routes"><i class="fas fa-calendar-week"></i> Schedule</button>
                                     <button class="btn btn-sm btn-outline-info view-staff-logs-btn" data-id="${item.id}" data-name="${item.fullname}" title="Activity Logs"><i class="fas fa-file-invoice"></i></button>
                                     <button class="btn btn-sm btn-outline-primary edit-staff-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
                                     <button class="btn btn-sm btn-outline-danger delete-staff-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
@@ -2176,122 +2183,6 @@ $(document).ready(function () {
         }
     });
 
-    // ── Staff Route Schedule ─────────────────────────────
-    const STAFF_SCHED_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-
-    $(document).on('click', '.btn-staff-schedule', function () {
-        const staffId   = $(this).data('id');
-        const staffName = $(this).data('name');
-
-        $('#staff-sched-staff-id').val(staffId);
-        $('#sched-staff-name').text(staffName);
-        $('#staff-schedule-form')[0].reset();
-        $('#staff-sched-staff-id').val(staffId); // reset re-clears hidden, set again
-
-        // Populate route dropdown with staff's own routes
-        $.get('api/beatroute.php?action=my_routes&staff_id=' + staffId, function (res) {
-            const $sel = $('#staff-sched-route');
-            $sel.empty().append('<option value="">-- Select Route --</option>');
-            if (res.status === 'success') {
-                res.data.forEach(r => $sel.append(`<option value="${r.id}">${r.route_name}</option>`));
-            }
-        });
-
-        loadStaffWeekGrid(staffId);
-        $('#staffScheduleModal').modal('show');
-    });
-
-    function loadStaffWeekGrid(staffId) {
-        $.get('api/beatroute.php?action=schedule_list', function (res) {
-            const all  = res.status === 'success' ? res.data : [];
-            const mine = all.filter(e => String(e.staff_id) === String(staffId) || !e.staff_id);
-            // actually filter strictly to this staff
-            const data = all.filter(e => String(e.staff_id) === String(staffId));
-
-            const byDay = {};
-            STAFF_SCHED_DAYS.forEach(d => byDay[d] = []);
-            data.forEach(e => { if (byDay[e.day_of_week]) byDay[e.day_of_week].push(e); });
-
-            const today = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
-            const grid  = $('#staff-week-grid');
-            grid.empty();
-
-            STAFF_SCHED_DAYS.forEach(function (day) {
-                const isToday = day === today;
-                const entries = byDay[day];
-
-                const chipsHtml = entries.map(e => `
-                    <div class="schedule-chip">
-                        <div>
-                            <div class="chip-route"><i class="fas fa-route me-1" style="font-size:.7rem"></i>${e.route_name}</div>
-                            ${e.notes ? `<div class="chip-notes">${e.notes}</div>` : ''}
-                        </div>
-                        <button class="schedule-chip-remove staff-sched-remove" data-id="${e.id}" title="Remove"><i class="fas fa-times"></i></button>
-                    </div>
-                `).join('');
-
-                grid.append(`
-                    <div class="week-day-col">
-                        <div class="week-day-header ${isToday ? 'today' : ''}">
-                            <span>${day.substring(0,3).toUpperCase()}</span>
-                            ${isToday ? '<span class="week-day-today-dot"></span>' : ''}
-                        </div>
-                        <div class="week-day-body">${chipsHtml || '<span class="text-secondary small px-1">No routes</span>'}</div>
-                    </div>
-                `);
-            });
-        });
-    }
-
-    $(document).on('submit', '#staff-schedule-form', function (e) {
-        e.preventDefault();
-        const staffId = $('#staff-sched-staff-id').val();
-        $.post('api/beatroute.php?action=schedule_add', $(this).serialize())
-            .done(function (res) {
-                if (res.status === 'success') {
-                    showToast('success', 'Route scheduled.');
-                    $('#staff-schedule-form')[0].reset();
-                    $('#staff-sched-staff-id').val(staffId);
-                    loadStaffWeekGrid(staffId);
-                } else {
-                    showToast('error', res.message);
-                }
-            });
-    });
-
-    $(document).on('click', '.staff-sched-remove', function () {
-        const id      = $(this).data('id');
-        const staffId = $('#staff-sched-staff-id').val();
-        if (!confirm('Remove this route from the schedule?')) return;
-        $.post('api/beatroute.php?action=schedule_remove', { id })
-            .done(function (res) {
-                if (res.status === 'success') {
-                    loadStaffWeekGrid(staffId);
-                } else {
-                    showToast('error', res.message);
-                }
-            });
-    });
-
-    // Reset all schedule entries for the currently open staff member
-    $(document).on('click', '#btn-reset-staff-schedule', function () {
-        const staffId = $('#staff-sched-staff-id').val();
-        if (!staffId) return;
-        if (!confirm('⚠️ This will remove ALL scheduled routes for this staff member.\n\nAre you sure you want to reset their schedule?')) return;
-        $.post('api/beatroute.php?action=schedule_reset_staff', { staff_id: staffId })
-            .done(function (res) {
-                if (res.status === 'success') {
-                    showToast('success', 'Schedule has been reset.');
-                    loadStaffWeekGrid(staffId);
-                } else {
-                    showToast('error', res.message);
-                }
-            })
-            .fail(function () {
-                showToast('error', 'Server error while resetting schedule.');
-            });
-    });
-
     // View audit activity logs for specific staff
     $(document).on('click', '.view-staff-logs-btn', function () {
         const id = $(this).data('id');
@@ -2352,7 +2243,7 @@ $(document).ready(function () {
                                 <td>${badge}</td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-outline-primary view-order-details-btn" data-id="${item.id}" title="Review Order"><i class="fas fa-eye"></i> View</button>
-                                    ${item.status === 'Pending' ? `<button class="btn btn-sm btn-outline-warning ms-1 edit-order-btn" data-id="${item.id}" title="Edit Order"><i class="fas fa-edit"></i> Edit</button>` : ''}
+                                    ${item.status === 'Pending' && $('#owner-approval-area').length === 0 ? `<button class="btn btn-sm btn-outline-warning ms-1 edit-order-btn" data-id="${item.id}" title="Edit Order"><i class="fas fa-edit"></i> Edit</button>` : ''}
                                 </td>
                             </tr>
                         `);
@@ -2379,6 +2270,22 @@ $(document).ready(function () {
             return;
         }
         
+        const skuObj = currentSkusData.find(s => s.id == skuId);
+        if (skuObj) {
+            let stock = parseInt(skuObj.current_stock || 0);
+            let inCart = 0;
+            const existIndex = orderCart.findIndex(item => item.id == skuId);
+            if (existIndex > -1) {
+                inCart = orderCart[existIndex].quantity;
+                if (orderCart[existIndex].original_quantity) stock += orderCart[existIndex].original_quantity;
+            }
+            
+            if (qty > (stock - inCart)) {
+                showToast('error', `Insufficient stock. Only ${stock - inCart} left available to add.`);
+                return;
+            }
+        }
+        
         // Fetch SKU details to append to local cart
         $.get(`api/skus.php?action=detail&id=${skuId}`, function (res) {
             if (res.status === 'success') {
@@ -2396,13 +2303,21 @@ $(document).ready(function () {
                         price: parseFloat(sku.selling_price),
                         gst_pct: parseFloat(sku.gst_percentage),
                         quantity: qty,
+                        original_quantity: 0,
                         discount: disc,
                         discount_rules: sku.discount_rules || []
                     });
                 }
                 
-                // Reset inputs
-                $('#cart-sku-select').val('');
+                // Update available stock display
+                if (skuObj) {
+                    let newStock = parseInt(skuObj.current_stock || 0);
+                    if (existIndex > -1 && orderCart[existIndex].original_quantity) newStock += orderCart[existIndex].original_quantity;
+                    const newInCart = existIndex > -1 ? orderCart[existIndex].quantity : qty;
+                    $('#cart-stock-count').val(newStock - newInCart);
+                }
+                
+                // Reset qty
                 $('#cart-qty').val('1');
                 
                 renderOrderCartTable();
@@ -2412,8 +2327,15 @@ $(document).ready(function () {
 
     $(document).on('click', '.remove-cart-item', function () {
         const index = $(this).data('index');
+        const removedItem = orderCart[index];
         orderCart.splice(index, 1);
         renderOrderCartTable();
+        
+        // Update stock display if the removed item is currently selected in dropdown
+        const selectedSkuId = $('#cart-sku-select').val();
+        if (selectedSkuId == removedItem.id) {
+            $('#cart-sku-select').trigger('change');
+        }
     });
 
     function renderOrderCartTable() {
@@ -2503,6 +2425,8 @@ $(document).ready(function () {
         
         // Compile Cart data to form payload
         const payload = {
+            edit_order_id: $('#edit-order-id').val(),
+            order_mode: $('#ord-mode').val(),
             retailer_id: $('#ord-retailer').val(),
             order_date: $('#ord-date').val(),
             remarks: $('#ord-remarks').val(),
@@ -2805,11 +2729,25 @@ $(document).ready(function () {
             
         // Collect payment modal triggers
         if ($('#collect-payment-form').length > 0) {
-            populateDropdown('api/retailers.php?action=list', '#pay-retailer', '-- Select Retailer --', 'id', 'shop_name');
+            populateDropdown('api/beatroute.php?action=my_routes', '#pay-route', '-- Select Route --', 'id', 'route_name');
+            $('#pay-retailer').html('<option value="">-- Select Retailer --</option>').prop('disabled', true);
             $('#pay-invoice').empty().append('<option value="">-- Apply to General Outstanding Balance --</option>');
             $('#pay-outstanding-val').text('₹0.00');
         }
     }
+
+    // Route -> Retailer dependency
+    $(document).on('change', '#pay-route', function () {
+        const routeId = $(this).val();
+        $('#pay-retailer').html('<option value="">-- Select Retailer --</option>').prop('disabled', true);
+        $('#pay-invoice').empty().append('<option value="">-- Apply to General Outstanding Balance --</option>');
+        $('#pay-outstanding-val').text('₹0.00');
+        
+        if (routeId) {
+            populateDropdown(`api/retailers.php?action=list&route_id=${routeId}`, '#pay-retailer', '-- Select Retailer --', 'id', 'shop_name');
+            $('#pay-retailer').prop('disabled', false);
+        }
+    });
 
     // Dynamic invoice loading upon retailer selection
     $(document).on('change', '#pay-retailer', function () {
@@ -3924,11 +3862,11 @@ $(document).ready(function () {
                             <tr>
                                 <td><strong>${route.route_name}</strong></td>
                                 <td><span class="badge bg-info px-2">${route.retailer_count} Retailers</span></td>
+                                <td>${route.staff_names ? `<span class="small text-secondary">${route.staff_names}</span>` : '<span class="small text-muted">Unassigned</span>'}</td>
                                 <td>${formatDate(route.created_at)}</td>
                                 <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-warning btn-schedule-route me-1" data-id="${route.id}" data-name="${route.route_name}" title="Schedule"><i class="fas fa-calendar-plus"></i> Schedule</button>
                                     <button type="button" class="btn btn-sm btn-action primary btn-edit-route" data-id="${route.id}" data-name="${route.route_name}"><i class="fas fa-edit me-1"></i> Edit</button>
-                                    <button type="button" class="btn btn-sm btn-danger btn-delete-route" data-id="${route.id}"><i class="fas fa-trash"></i></button>
+                                    ${parseInt(route.staff_count) > 0 ? '' : `<button type="button" class="btn btn-sm btn-danger btn-delete-route" data-id="${route.id}"><i class="fas fa-trash"></i></button>`}
                                 </td>
                             </tr>
                         `);
@@ -3999,11 +3937,7 @@ $(document).ready(function () {
         openScheduleModal(day, null);
     });
 
-    $(document).on('click', '.btn-schedule-route', function () {
-        const routeId   = $(this).data('id');
-        const routeName = $(this).data('name');
-        openScheduleModal(null, { id: routeId, name: routeName });
-    });
+
 
     // Reset entire weekly schedule
     $(document).on('click', '#btn-reset-schedule', function () {
@@ -4036,14 +3970,7 @@ $(document).ready(function () {
             if (preselectedRoute) $sel.val(preselectedRoute.id);
         });
 
-        // Populate staff dropdown
-        $.get('api/staff.php?action=list', function (res) {
-            const $sel = $('#sched-staff-select');
-            $sel.empty().append('<option value="">-- Any / Unassigned --</option>');
-            if (res.status === 'success') {
-                res.data.forEach(s => $sel.append(`<option value="${s.id}">${s.fullname}</option>`));
-            }
-        });
+
 
         if (preselectedDay) {
             $('#sched-day-input').val(preselectedDay);
@@ -4218,7 +4145,7 @@ $(document).ready(function () {
                     ? `<button class="btn btn-sm btn-outline-warning flex-fill" onclick="window.location.hash='#orders'">
                            <i class="fas fa-eye me-1"></i> Edit / View Order
                        </button>`
-                    : `<button class="btn btn-sm btn-outline-primary flex-fill br-new-order-btn" data-id="${r.id}" data-name="${r.shop_name}">
+                    : `<button class="btn btn-sm btn-outline-primary flex-fill br-new-order-btn" data-id="${r.id}" data-name="${r.shop_name}" data-route-id="${r.route_id}">
                            <i class="fas fa-shopping-basket me-1"></i> Order
                        </button>`;
 
@@ -4309,7 +4236,9 @@ $(document).ready(function () {
 
     $(document).on('click', '.br-new-order-btn', function () {
         const id = $(this).data('id');
+        const routeId = $(this).data('route-id');
         window.pendingOrderRetailerId = id;
+        window.pendingOrderRouteId = routeId;
         window.orderModeContext = 'By Route';
         window.location.hash = '#place_order';
     });
@@ -4347,20 +4276,37 @@ $(document).ready(function () {
             } else {
                 $('#ord-mode').val('By Call');
             }
-            populateDropdown('api/beatroute.php?action=my_routes', '#ord-beatroute', '-- All Routes --', 'id', 'route_name');
-            populateDropdown('api/retailers.php?action=list', '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
-                if (window.pendingOrderRetailerId) {
-                    $('#ord-retailer').val(window.pendingOrderRetailerId);
-                    window.pendingOrderRetailerId = null;
-                    $('#ord-retailer').trigger('change');
-                }
-                
-                if (isEditMode) {
+
+            const isByRoute = $('#ord-mode').val() === 'By Route';
+            
+            // disable fields if By Route
+            $('#ord-beatroute').prop('disabled', isByRoute);
+            $('#ord-retailer').prop('disabled', isByRoute);
+            
+            $('#ord-retailer').empty().append('<option value="">-- Select Retailer Shop --</option>');
+
+            populateDropdown('api/beatroute.php?action=my_routes', '#ord-beatroute', '-- All Routes --', 'id', 'route_name').done(function() {
+                if (isByRoute && window.pendingOrderRouteId) {
+                    $('#ord-beatroute').val(window.pendingOrderRouteId);
+                    window.pendingOrderRouteId = null;
+                    
+                    let url = 'api/retailers.php?action=list&route_id=' + $('#ord-beatroute').val();
+                    populateDropdown(url, '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
+                        if (window.pendingOrderRetailerId) {
+                            $('#ord-retailer').val(window.pendingOrderRetailerId).trigger('change');
+                            window.pendingOrderRetailerId = null;
+                        }
+                    });
+                } else if (isEditMode) {
                     $.get(`api/orders.php?action=detail&id=${editId}`, function(res) {
                         if (res.status === 'success') {
                             const order = res.data;
                             const items = res.data.items || [];
-                            $('#ord-retailer').val(order.retailer_id).trigger('change');
+                            
+                            populateDropdown('api/retailers.php?action=list', '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
+                                $('#ord-retailer').val(order.retailer_id).trigger('change');
+                            });
+                            
                             $('#ord-remarks').val(order.remarks);
                             
                             orderCart = items.map(i => ({
@@ -4370,6 +4316,7 @@ $(document).ready(function () {
                                 price: parseFloat(i.price),
                                 gst_pct: parseFloat(i.gst_percentage),
                                 quantity: parseInt(i.quantity),
+                                original_quantity: parseInt(i.quantity),
                                 discount: parseInt(i.quantity) > 0 ? parseFloat(i.discount_amount) / parseInt(i.quantity) : 0,
                                 discount_rules: []
                             }));
@@ -4477,7 +4424,14 @@ $(document).ready(function () {
         if (skuId) {
             const skuObj = currentSkusData.find(s => s.id == skuId);
             if (skuObj) {
-                $('#cart-stock-count').val(skuObj.current_stock || 0);
+                let stock = parseInt(skuObj.current_stock || 0);
+                let inCart = 0;
+                const existItem = orderCart.find(item => item.id == skuId);
+                if (existItem) {
+                    inCart = existItem.quantity;
+                    if (existItem.original_quantity) stock += existItem.original_quantity;
+                }
+                $('#cart-stock-count').val(stock - inCart);
             }
         } else {
             $('#cart-stock-count').val('0');

@@ -22,6 +22,7 @@
                     <tr>
                         <th>Route Name</th>
                         <th>Assigned Retailers</th>
+                        <th>Assigned Staff</th>
                         <th>Created On</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -97,12 +98,7 @@
                             <option value="">-- Select Route --</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label-custom">Assign Sales Staff</label>
-                        <select class="form-select form-control-custom" id="sched-staff-select" name="staff_id">
-                            <option value="">-- Any / Unassigned --</option>
-                        </select>
-                    </div>
+
                     <div class="mb-3">
                         <label class="form-label-custom">Notes <span class="text-secondary small">(optional)</span></label>
                         <input type="text" class="form-control form-control-custom" name="notes" placeholder="e.g. Priority area visit">

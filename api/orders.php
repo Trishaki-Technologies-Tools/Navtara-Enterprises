@@ -109,8 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SELECT COUNT(DISTINCT r.id) 
                 FROM retailers r
                 JOIN route_retailers rr ON r.id = rr.retailer_id
-                JOIN route_schedules rs ON rr.route_id = rs.route_id
-                WHERE r.id = ? AND rs.staff_id = ?
+                JOIN staff_routes sr ON rr.route_id = sr.route_id
+                WHERE r.id = ? AND sr.user_id = ?
             ");
             $chk->execute([$retailer_id, $userId]);
             if ($chk->fetchColumn() == 0) {
@@ -120,6 +120,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $db->beginTransaction();
         try {
+            if ($edit_order_id > 0) {
+                // Verify order exists and is pending
+                $chkOrder = $db->prepare("SELECT status FROM orders WHERE id = ?");
+                $chkOrder->execute([$edit_order_id]);
+                if ($chkOrder->fetchColumn() !== 'Pending') {
+                    throw new Exception("Only pending orders can be edited.");
+                }
+                
+                // Add old stock back before deducting new stock
+                $stmtOldItems = $db->prepare("SELECT sku_id, quantity FROM order_items WHERE order_id = ?");
+                $stmtOldItems->execute([$edit_order_id]);
+                $oldItems = $stmtOldItems->fetchAll();
+                
+                $stmtRestore = $db->prepare("UPDATE skus SET current_stock = current_stock + ? WHERE id = ?");
+                foreach ($oldItems as $oldItem) {
+                    $stmtRestore->execute([$oldItem['quantity'], $oldItem['sku_id']]);
+                }
+            }
+            
             $total_amount = 0.00;
             $discount_amount = 0.00;
             $gst_amount = 0.00;
@@ -136,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Fetch SKU price and GST details
                 $stmtSku = $db->prepare("
-                    SELECT s.selling_price, s.gst_percentage, s.sku_name, s.sku_code
+                    SELECT s.selling_price, s.gst_percentage, s.sku_name, s.sku_code, s.current_stock
                     FROM skus s 
                     WHERE s.id = ? AND s.status = 'Active'
                 ");
@@ -146,6 +165,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$sku) {
                     throw new Exception("Invalid or inactive SKU selected.");
                 }
+                
+                if ((int)$sku['current_stock'] < $qty) {
+                    throw new Exception("Insufficient stock for {$sku['sku_name']}. Available: {$sku['current_stock']}");
+                }
+                
+                // Deduct stock
+                $stmtDeduct = $db->prepare("UPDATE skus SET current_stock = current_stock - ? WHERE id = ?");
+                $stmtDeduct->execute([$qty, $sku_id]);
                 
                 $price = (float)$sku['selling_price'];
                 $item_subtotal = $price * $qty;
@@ -181,13 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($edit_order_id > 0) {
-                // Verify order exists and is pending
-                $chkOrder = $db->prepare("SELECT status FROM orders WHERE id = ?");
-                $chkOrder->execute([$edit_order_id]);
-                if ($chkOrder->fetchColumn() !== 'Pending') {
-                    throw new Exception("Only pending orders can be edited.");
-                }
-                
                 $stmtDel = $db->prepare("DELETE FROM order_items WHERE order_id = ?");
                 $stmtDel->execute([$edit_order_id]);
                 
@@ -221,12 +241,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Log visit history showing visit status with order creation
-            $stmtTimeline = $db->prepare("
-                INSERT INTO retailer_timeline (retailer_id, staff_id, visit_date, visit_status, remarks)
-                VALUES (?, ?, CURDATE(), 'Visited - Order Taken', ?)
-            ");
-            $timelineRemarks = "Placed Order ID: {$orderId}. Total: " . formatRupees($grand_total);
-            $stmtTimeline->execute([$retailer_id, $userId, $timelineRemarks]);
+            if ($edit_order_id == 0) {
+                $stmtTimeline = $db->prepare("
+                    INSERT INTO retailer_timeline (retailer_id, staff_id, visit_date, visit_status, remarks)
+                    VALUES (?, ?, CURDATE(), 'Visited - Order Taken', ?)
+                ");
+                $timelineRemarks = "Placed Order ID: {$orderId}. Total: " . formatRupees($grand_total);
+                $stmtTimeline->execute([$retailer_id, $userId, $timelineRemarks]);
+            }
             
             $db->commit();
             if ($edit_order_id > 0) {
@@ -255,13 +277,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         try {
+            $db->beginTransaction();
+            
+            $chkStatus = $db->prepare("SELECT status FROM orders WHERE id = ? FOR UPDATE");
+            $chkStatus->execute([$id]);
+            $currentStatus = $chkStatus->fetchColumn();
+            
+            if ($currentStatus === $status) {
+                $db->rollBack();
+                sendJSON('success', "Order is already {$status}.");
+                exit;
+            }
+            
             $stmt = $db->prepare("UPDATE orders SET status = ?, remarks = CONCAT(COALESCE(remarks, ''), ?) WHERE id = ?");
             $appendRemarks = "\n[Status updated to {$status} by Owner. Note: {$remarks}]";
             $stmt->execute([$status, $appendRemarks, $id]);
             
+            // If cancelled, and previous status was not cancelled, restore stock
+            if ($status === 'Cancelled' && $currentStatus !== 'Cancelled') {
+                $stmtItems = $db->prepare("SELECT sku_id, quantity FROM order_items WHERE order_id = ?");
+                $stmtItems->execute([$id]);
+                $items = $stmtItems->fetchAll();
+                
+                $stmtRestore = $db->prepare("UPDATE skus SET current_stock = current_stock + ? WHERE id = ?");
+                foreach ($items as $item) {
+                    $stmtRestore->execute([$item['quantity'], $item['sku_id']]);
+                }
+            }
+            
+            // If it was cancelled previously and now changing to Approved, we need to deduct stock again!
+            if ($currentStatus === 'Cancelled' && $status !== 'Cancelled') {
+                $stmtItems = $db->prepare("SELECT sku_id, quantity FROM order_items WHERE order_id = ?");
+                $stmtItems->execute([$id]);
+                $items = $stmtItems->fetchAll();
+                
+                $stmtDeduct = $db->prepare("UPDATE skus SET current_stock = current_stock - ? WHERE id = ?");
+                foreach ($items as $item) {
+                    $stmtDeduct->execute([$item['quantity'], $item['sku_id']]);
+                }
+            }
+            
+            $db->commit();
+            
             logActivity('Update Order Status', "Owner updated Order ID: {$id} to Status: {$status}");
             sendJSON('success', "Order status successfully updated to {$status}.");
         } catch (PDOException $e) {
+            $db->rollBack();
             sendJSON('error', 'Database error: ' . $e->getMessage());
         }
     }

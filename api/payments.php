@@ -25,12 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ");
             } else {
                 $stmt = $db->prepare("
-                    SELECT p.*, r.shop_name, i.invoice_number, u.fullname as collector_name
+                    SELECT DISTINCT p.*, r.shop_name, i.invoice_number, u.fullname as collector_name
                     FROM payments p
                     JOIN retailers r ON p.retailer_id = r.id
+                    JOIN route_retailers rr ON r.id = rr.retailer_id
+                    JOIN staff_routes sr ON rr.route_id = sr.route_id
                     LEFT JOIN invoices i ON p.invoice_id = i.id
                     LEFT JOIN users u ON p.collected_by = u.id
-                    WHERE r.assigned_staff_id = ?
+                    WHERE sr.user_id = ?
                     ORDER BY p.id DESC
                 ");
                 $stmt->execute([$_SESSION['user_id']]);
@@ -61,7 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Authorization check: Sales staff can only collect from their assigned retailers
         if ($roleName !== 'Owner') {
-            $chk = $db->prepare("SELECT COUNT(*) FROM retailers WHERE id = ? AND assigned_staff_id = ?");
+            $chk = $db->prepare("
+                SELECT COUNT(DISTINCT r.id) 
+                FROM retailers r 
+                JOIN route_retailers rr ON r.id = rr.retailer_id
+                JOIN staff_routes sr ON rr.route_id = sr.route_id
+                WHERE r.id = ? AND sr.user_id = ?
+            ");
             $chk->execute([$retailer_id, $_SESSION['user_id']]);
             if ($chk->fetchColumn() == 0) {
                 sendJSON('error', 'Unauthorized operation. Retailer not assigned.');

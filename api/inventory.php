@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $gst_pct = (float)$sku['gst_percentage'];
                 
                 $gross_subtotal = $purchase_price * $qty;
-                $item_disc = min($gross_subtotal, $disc * $qty);
+                $item_disc = min($gross_subtotal, $disc);
                 $taxable_value = $gross_subtotal - $item_disc;
                 
                 $item_gst = ($taxable_value * $gst_pct) / 100;
@@ -332,7 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $gst_pct = (float)$sku['gst_percentage'];
                 
                 $gross_subtotal = $purchase_price * $qty;
-                $item_disc = min($gross_subtotal, $disc * $qty);
+                $item_disc = min($gross_subtotal, $disc);
                 $taxable_value = $gross_subtotal - $item_disc;
                 
                 $item_gst = ($taxable_value * $gst_pct) / 100;

@@ -24,10 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ");
             } else {
                 $stmt = $db->prepare("
-                    SELECT i.*, r.shop_name, r.name as retailer_name
+                    SELECT DISTINCT i.*, r.shop_name, r.name as retailer_name
                     FROM invoices i
                     JOIN retailers r ON i.retailer_id = r.id
-                    WHERE r.assigned_staff_id = ?
+                    JOIN route_retailers rr ON r.id = rr.retailer_id
+                    JOIN staff_routes sr ON rr.route_id = sr.route_id
+                    WHERE sr.user_id = ?
                     ORDER BY i.invoice_date DESC, i.id DESC
                 ");
                 $stmt->execute([$_SESSION['user_id']]);

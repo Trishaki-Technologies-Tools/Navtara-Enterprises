@@ -34,7 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         try {
             $stmt = $db->query("
                 SELECT r.*, 
-                       (SELECT COUNT(*) FROM route_retailers rr WHERE rr.route_id = r.id) as retailer_count 
+                       (SELECT COUNT(*) FROM route_retailers rr WHERE rr.route_id = r.id) as retailer_count,
+                       (SELECT COUNT(*) FROM staff_routes sr WHERE sr.route_id = r.id) as staff_count,
+                       (SELECT GROUP_CONCAT(u.fullname SEPARATOR ', ') FROM staff_routes sr JOIN users u ON sr.user_id = u.id WHERE sr.route_id = r.id) as staff_names
                 FROM routes r 
                 ORDER BY r.id DESC
             ");
@@ -113,10 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $stmt = $db->query("
                 SELECT rs.id, rs.day_of_week, rs.notes,
                        r.id   AS route_id,   r.route_name,
-                       u.id   AS staff_id,   u.fullname AS staff_name
+                       (SELECT GROUP_CONCAT(u.fullname SEPARATOR ', ') FROM staff_routes sr JOIN users u ON sr.user_id = u.id WHERE sr.route_id = r.id) AS staff_name
                 FROM route_schedules rs
                 JOIN routes r ON rs.route_id = r.id
-                LEFT JOIN users u ON rs.staff_id = u.id
                 ORDER BY FIELD(rs.day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), r.route_name
             ");
             sendJSON('success', 'Schedule loaded.', $stmt->fetchAll());
@@ -136,7 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                        r.id AS route_id, r.route_name
                 FROM route_schedules rs
                 JOIN routes r ON rs.route_id = r.id
-                WHERE rs.staff_id = ? AND rs.day_of_week = ?
+                JOIN staff_routes sr ON sr.route_id = r.id
+                WHERE sr.user_id = ? AND rs.day_of_week = ?
                 ORDER BY rs.id ASC
             ");
             $stmtSched->execute([$staffId, $today]);
@@ -274,12 +276,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJSON('error', 'Route and a valid day are required.');
         }
         try {
+            // Check for existing
+            $check = $db->prepare("SELECT id FROM route_schedules WHERE route_id = ? AND day_of_week = ?");
+            $check->execute([$route_id, $day]);
+            if ($check->fetch()) {
+                sendJSON('error', 'This route is already scheduled for ' . $day);
+            }
+
             $stmt = $db->prepare("
                 INSERT INTO route_schedules (route_id, staff_id, day_of_week, notes)
-                VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE notes = VALUES(notes), staff_id = VALUES(staff_id)
+                VALUES (?, NULL, ?, ?)
             ");
-            $stmt->execute([$route_id, $staff_id, $day, $notes]);
+            $stmt->execute([$route_id, $day, $notes]);
             logActivity('Schedule Route', "Scheduled route ID {$route_id} on {$day}");
             sendJSON('success', 'Schedule saved.');
         } catch (PDOException $e) {

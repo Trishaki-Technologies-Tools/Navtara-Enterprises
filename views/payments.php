@@ -62,11 +62,21 @@
             </div>
             <form id="collect-payment-form">
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label for="pay-retailer" class="form-label-custom">Select Retailer Shop <span class="text-danger">*</span></label>
-                        <select class="form-select form-control-custom" id="pay-retailer" name="retailer_id" required>
-                            <!-- Loaded dynamically via JS -->
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="pay-route" class="form-label-custom">Select Beat Route</label>
+                            <select class="form-select form-control-custom" id="pay-route" name="route_id">
+                                <option value="">-- All Routes --</option>
+                                <!-- Loaded dynamically via JS -->
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="pay-retailer" class="form-label-custom">Select Retailer Shop <span class="text-danger">*</span></label>
+                            <select class="form-select form-control-custom" id="pay-retailer" name="retailer_id" required disabled>
+                                <option value="">-- Select Retailer --</option>
+                                <!-- Loaded dynamically via JS -->
+                            </select>
+                        </div>
                     </div>
                     
                     <div class="mb-3">

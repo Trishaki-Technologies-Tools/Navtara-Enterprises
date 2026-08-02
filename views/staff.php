@@ -249,57 +249,6 @@
     </div>
 </div>
 
-<!-- Staff Route Schedule Modal -->
-<div class="modal fade" id="staffScheduleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content modal-content-custom">
-            <div class="modal-header modal-header-custom">
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-calendar-week text-warning me-2"></i>
-                    Route Schedule — <span id="sched-staff-name" class="text-warning"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                <!-- Add schedule row -->
-                <div class="p-4 border-bottom border-secondary">
-                    <form id="staff-schedule-form" class="row g-2 align-items-end">
-                        <input type="hidden" id="staff-sched-staff-id" name="staff_id">
-                        <div class="col-md-3">
-                            <label class="form-label-custom mb-1">Day of Week <span class="text-danger">*</span></label>
-                            <select class="form-select form-control-custom" name="day_of_week" id="staff-sched-day" required>
-                                <option value="">-- Select Day --</option>
-                                <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-                                <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label-custom mb-1">Beat Route <span class="text-danger">*</span></label>
-                            <select class="form-select form-control-custom" name="route_id" id="staff-sched-route" required>
-                                <option value="">-- Select Route --</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label-custom mb-1">Notes</label>
-                            <input type="text" class="form-control form-control-custom" name="notes" placeholder="e.g. Morning priority">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-action primary w-100"><i class="fas fa-plus me-1"></i> Add</button>
-                        </div>
-                    </form>
-                </div>
-                <!-- Weekly grid -->
-                <div class="week-schedule-grid" id="staff-week-grid" style="min-height: 200px;"></div>
-            </div>
-            <div class="modal-footer modal-footer-custom d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-danger btn-sm" id="btn-reset-staff-schedule">
-                    <i class="fas fa-trash-alt me-1"></i> Reset Schedule
-                </button>
-                <button type="button" class="btn btn-action secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Staff Audit Logs Modal -->
 <div class="modal fade" id="staffLogsModal" tabindex="-1" aria-hidden="true">
