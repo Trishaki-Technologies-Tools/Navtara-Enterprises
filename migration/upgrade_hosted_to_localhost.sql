@@ -1,34 +1,31 @@
 -- ==============================================================================
 -- DATABASE MIGRATION SCRIPT: Hosted (Production) -> Localhost (Development)
--- Target: Apply to Hosted Database to bring it up to parity with Localhost
--- Generated for: Navtara Enterprises Business Management ERP
+-- Target: MariaDB 10.2+ / 11.x (Hostinger / cPanel / Localhost)
 -- ==============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
-SET time_zone = "+00:00";
 
 -- ------------------------------------------------------------------------------
--- 1. MODIFY EXISTING TABLES (Column additions & type changes)
+-- 1. MODIFY EXISTING TABLES (Safe additions with IF NOT EXISTS)
 -- ------------------------------------------------------------------------------
 
 -- (a) Update customer_ledger: Change transaction_type from ENUM to VARCHAR(50)
---     This accommodates new transaction types like Sales Returns, Credit Notes, etc.
 ALTER TABLE `customer_ledger` 
   MODIFY COLUMN `transaction_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL;
 
--- (b) Update retailers: Add `is_special` flag
+-- (b) Update retailers: Add `is_special` flag (IF NOT EXISTS prevents duplicate errors)
 ALTER TABLE `retailers` 
-  ADD COLUMN `is_special` tinyint(1) NOT NULL DEFAULT 0 AFTER `status`;
+  ADD COLUMN IF NOT EXISTS `is_special` tinyint(1) NOT NULL DEFAULT 0;
 
--- (c) Update skus: Add `allow_dynamic_price` flag
+-- (c) Update skus: Add `allow_dynamic_price` flag (IF NOT EXISTS prevents duplicate errors)
 ALTER TABLE `skus` 
-  ADD COLUMN `allow_dynamic_price` tinyint(1) NOT NULL DEFAULT 0 AFTER `status`;
+  ADD COLUMN IF NOT EXISTS `allow_dynamic_price` tinyint(1) NOT NULL DEFAULT 0;
 
 
 -- ------------------------------------------------------------------------------
--- 2. CREATE NEW TABLES
+-- 2. CREATE NEW TABLES (IF NOT EXISTS)
 -- ------------------------------------------------------------------------------
 
 -- Table: `business_capital`

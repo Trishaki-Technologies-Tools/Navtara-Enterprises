@@ -5,19 +5,19 @@
 // ==============================================================================
 // 1. LOCAL DATABASE CONFIG (Comment out when deploying to Live)
 // ==============================================================================
-// define('DB_HOST', 'localhost');
-// define('DB_USER', 'root');
-// define('DB_PASS', '');
-// define('DB_NAME', 'navtara_db');
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'navtara_db');
 
 
 // ==============================================================================
 // 2. PRODUCTION DATABASE CONFIG (Uncomment when deploying to Live)
 // ==============================================================================
-define('DB_HOST', 'localhost');
-define('DB_USER', 'u345018570_navatara');
-define('DB_PASS', 'Navtara@db#01');
-define('DB_NAME', 'u345018570_navatara');
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'u345018570_navatara');
+// define('DB_PASS', 'Navtara@db#01');
+// define('DB_NAME', 'u345018570_navatara');
 
 
 // ==============================================================================

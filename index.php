@@ -90,7 +90,7 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <!-- Global Custom Styles -->
-    <link href="assets/css/style.css" rel="stylesheet">
+    <link href="assets/css/style.css?v=<?php echo file_exists(__DIR__ . '/assets/css/style.css') ? filemtime(__DIR__ . '/assets/css/style.css') : time(); ?>" rel="stylesheet">
     <script>
         window.userRole = "<?php echo htmlspecialchars($roleName); ?>";
     </script>
@@ -380,9 +380,9 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Main Application SPA JS -->
+    <!-- Main Application SPA JS with auto cache busting -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/app.js?v=<?php echo file_exists(__DIR__ . '/assets/js/app.js') ? filemtime(__DIR__ . '/assets/js/app.js') : time(); ?>"></script>
 </body>
 
 </html>
