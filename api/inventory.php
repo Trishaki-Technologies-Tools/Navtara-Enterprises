@@ -13,7 +13,7 @@ $action = $_GET['action'] ?? '';
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'purchases_list') {
         try {
-            $stmt = $db->query("SELECT * FROM purchases ORDER BY id DESC");
+            $stmt = $db->query("SELECT * FROM purchases ORDER BY purchase_date DESC, id DESC");
             $purchases = $stmt->fetchAll();
             sendJSON('success', 'Purchases loaded.', $purchases);
         } catch (PDOException $e) {

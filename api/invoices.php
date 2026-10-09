@@ -257,8 +257,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Fetch retailer profile for details
             $retailer_details = json_encode([
                 'shop_name'  => $retailer['shop_name'],
+                'name'       => $retailer['name'] ?? '',
                 'mobile'     => $retailer['mobile'] ?? '',
                 'address'    => $retailer['address'] ?? '',
+                'area'       => $retailer['area'] ?? '',
+                'city'       => $retailer['city'] ?? '',
+                'pin_code'   => $retailer['pin_code'] ?? '',
                 'gst_number' => $retailer['gst_number'] ?? ''
             ]);
             

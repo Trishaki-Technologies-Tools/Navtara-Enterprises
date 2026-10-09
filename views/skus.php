@@ -40,6 +40,7 @@
                         <th>Unit</th>
                         <th class="text-center">Stock</th>
                         <th>Status</th>
+                        <th>Manual Billing</th>
                         <?php if ($_SESSION['role_name'] === 'Owner'): ?>
                         <th class="text-center">Actions</th>
                         <?php endif; ?>
@@ -123,12 +124,25 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="sku-status" class="form-label-custom">Status <span class="text-danger">*</span></label>
-                        <select class="form-select form-control-custom" id="sku-status" name="status" required>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="sku-status" class="form-label-custom">Status <span class="text-danger">*</span></label>
+                            <select class="form-select form-control-custom" id="sku-status" name="status" required>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Salesman Dynamic Pricing</label>
+                            <div class="p-2 bg-secondary bg-opacity-10 rounded border border-secondary">
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="sku-allow-dynamic" name="allow_dynamic_price" value="1">
+                                    <label class="form-check-label fw-bold text-warning small" for="sku-allow-dynamic">
+                                        Allow Manual Billing / Rate Edit
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer modal-footer-custom">
@@ -202,7 +216,6 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <!-- Stock input shouldn't be edited here usually, but we left it per requested structure -->
                             <label for="edit-sku-min-stock" class="form-label-custom">Min Stock Alert <span class="text-danger">*</span></label>
                             <input type="number" class="form-control form-control-custom" id="edit-sku-min-stock" name="minimum_stock" value="5" required>
                         </div>
@@ -213,6 +226,16 @@
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="mb-3 p-3 bg-secondary bg-opacity-10 rounded border border-secondary">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="edit-sku-allow-dynamic" name="allow_dynamic_price" value="1">
+                            <label class="form-check-label fw-bold text-warning" for="edit-sku-allow-dynamic">
+                                <i class="fas fa-edit me-1"></i> Allow Manual Billing / Dynamic Rate by Salesman
+                            </label>
+                        </div>
+                        <small class="text-white-50 d-block mt-1">When checked, salesman can edit price of rate and discount in order cart details.</small>
                     </div>
                 </div>
                 <div class="modal-footer modal-footer-custom">

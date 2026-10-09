@@ -73,6 +73,11 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
+        <button class="nav-link" id="gst-credit-notes-tab" data-bs-toggle="tab" data-bs-target="#gst-credit-notes-pane" type="button" role="tab" aria-selected="false">
+            <i class="fas fa-undo-alt text-danger me-1"></i> Credit Notes (Sales Returns)
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
         <button class="nav-link" id="gst-purchases-tab" data-bs-toggle="tab" data-bs-target="#gst-purchases-pane" type="button" role="tab" aria-selected="false">
             <i class="fas fa-arrow-down text-success me-1"></i> Inward GST (Product Purchases)
         </button>
@@ -102,6 +107,7 @@
                                 <th>Retailer Shop</th>
                                 <th>GSTIN</th>
                                 <th class="text-end">Taxable Subtotal (₹)</th>
+                                <th class="text-end">Discount (₹)</th>
                                 <th class="text-end">GST Collected (₹)</th>
                                 <th class="text-end">Grand Total (₹)</th>
                             </tr>
@@ -111,8 +117,12 @@
                         </tbody>
                         <tfoot>
                             <tr class="fw-bold bg-dark text-white">
-                                <td colspan="4" class="text-end">Grand Total:</td>
+                                <td>Grand Total:</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
                                 <td class="text-end text-info" id="gst-sales-total-subtotal">₹0.00</td>
+                                <td class="text-end text-danger" id="gst-sales-total-discount">₹0.00</td>
                                 <td class="text-end text-warning" id="gst-sales-total-gst">₹0.00</td>
                                 <td class="text-end text-success" id="gst-sales-total-grand">₹0.00</td>
                             </tr>
@@ -123,7 +133,52 @@
         </div>
     </div>
     
-    <!-- 2. Inward GST (Product Purchases) Pane -->
+    <!-- 2. Credit Notes (Sales Returns) Pane -->
+    <div class="tab-pane fade" id="gst-credit-notes-pane" role="tabpanel">
+        <div class="custom-card">
+            <div class="custom-card-header d-flex justify-content-between align-items-center py-3">
+                <h5 class="custom-card-title mb-0"><i class="fas fa-undo-alt me-1 text-danger"></i> Credit Notes &amp; Sales Returns GST Reversals</h5>
+                <span class="badge bg-danger">Output Tax Reversal</span>
+            </div>
+            <div class="custom-card-body">
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover w-100" id="gst-credit-notes-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Credit Note #</th>
+                                <th>Against Invoice</th>
+                                <th>Retailer Shop</th>
+                                <th>GSTIN</th>
+                                <th class="text-end">Taxable Value (₹)</th>
+                                <th class="text-end">GST Reversed (₹)</th>
+                                <th class="text-end">Credit Total (₹)</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gst-credit-notes-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold bg-dark text-white">
+                                <td>Grand Total:</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end text-info" id="gst-cn-total-subtotal">₹0.00</td>
+                                <td class="text-end text-danger" id="gst-cn-total-gst">₹0.00</td>
+                                <td class="text-end text-success" id="gst-cn-total-grand">₹0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Inward GST (Product Purchases) Pane -->
     <div class="tab-pane fade" id="gst-purchases-pane" role="tabpanel">
         <div class="custom-card">
             <div class="custom-card-header d-flex justify-content-between align-items-center py-3">
@@ -139,6 +194,7 @@
                                 <th>Supplier Invoice No.</th>
                                 <th>Supplier Name</th>
                                 <th class="text-end">Taxable Subtotal (₹)</th>
+                                <th class="text-end">Discount (₹)</th>
                                 <th class="text-end">GST Paid (₹)</th>
                                 <th class="text-end">Grand Total (₹)</th>
                                 <th>Remarks</th>
@@ -149,8 +205,11 @@
                         </tbody>
                         <tfoot>
                             <tr class="fw-bold bg-dark text-white">
-                                <td colspan="3" class="text-end">Grand Total:</td>
+                                <td>Grand Total:</td>
+                                <td></td>
+                                <td></td>
                                 <td class="text-end text-info" id="gst-pur-total-subtotal">₹0.00</td>
+                                <td class="text-end text-danger" id="gst-pur-total-discount">₹0.00</td>
                                 <td class="text-end text-warning" id="gst-pur-total-gst">₹0.00</td>
                                 <td class="text-end text-success" id="gst-pur-total-grand">₹0.00</td>
                                 <td></td>
@@ -162,7 +221,7 @@
         </div>
     </div>
     
-    <!-- 3. Inward GST (Expenses & Assets) Pane -->
+    <!-- 4. Inward GST (Expenses & Assets) Pane -->
     <div class="tab-pane fade" id="gst-expenses-pane" role="tabpanel">
         <div class="custom-card">
             <div class="custom-card-header d-flex justify-content-between align-items-center py-3">
@@ -189,7 +248,9 @@
                         </tbody>
                         <tfoot>
                             <tr class="fw-bold bg-dark text-white">
-                                <td colspan="3" class="text-end">Grand Total:</td>
+                                <td>Grand Total:</td>
+                                <td></td>
+                                <td></td>
                                 <td class="text-end text-info" id="gst-exp-total-subtotal">₹0.00</td>
                                 <td></td>
                                 <td class="text-end text-warning" id="gst-exp-total-gst">₹0.00</td>

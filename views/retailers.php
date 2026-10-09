@@ -122,17 +122,23 @@
                     <h6 class="fw-bold text-info border-bottom border-secondary pb-2 mb-3 mt-4">Location Coordinates
                         &amp; Address</h6>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="ret-area" class="form-label-custom">Area / Landmark <span
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-custom" id="ret-area" name="area"
-                                required placeholder="e.g. Miramar">
+                                required placeholder="e.g. Mahadwar Road">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="ret-city" class="form-label-custom">City / Taluka <span
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-custom" id="ret-city" name="city"
-                                required placeholder="e.g. Panaji">
+                                required placeholder="e.g. Belagavi">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="ret-state" class="form-label-custom">State <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-custom" id="ret-state" name="state"
+                                required placeholder="e.g. Karnataka" value="Karnataka">
                         </div>
                     </div>
 
@@ -180,12 +186,21 @@
                                 <!-- Loaded dynamically via JS -->
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label for="ret-status" class="form-label-custom">Status</label>
                             <select class="form-select form-control-custom" id="ret-status" name="status">
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
+                        </div>
+                        <div class="col-md-3 mb-3 d-flex flex-column justify-content-center">
+                            <label class="form-label-custom mb-1">&nbsp;</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="ret-is-special" name="is_special" value="1" <?php echo $_SESSION['role_name'] !== 'Owner' ? 'disabled' : ''; ?>>
+                                <label class="form-check-label fw-bold text-warning small" for="ret-is-special">
+                                    <i class="fas fa-star"></i> Special Retailer
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -284,17 +299,23 @@
                     <h6 class="fw-bold text-info border-bottom border-secondary pb-2 mb-3 mt-4">Location Coordinates
                         &amp; Address</h6>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="edit-ret-area" class="form-label-custom">Area / Landmark <span
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-custom" id="edit-ret-area" name="area"
                                 required>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="edit-ret-city" class="form-label-custom">City / Taluka <span
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-custom" id="edit-ret-city" name="city"
                                 required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit-ret-state" class="form-label-custom">State <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-custom" id="edit-ret-state" name="state"
+                                required placeholder="e.g. Karnataka">
                         </div>
                     </div>
 
@@ -314,7 +335,7 @@
 
                     <div class="mb-3">
                         <label for="edit-ret-address" class="form-label-custom">Full Shop Address <span
-                                class="text-danger">*</span></label>
+                                    class="text-danger">*</span></label>
                         <textarea class="form-control form-control-custom" id="edit-ret-address" name="address" rows="2"
                             required></textarea>
                     </div>
@@ -342,6 +363,15 @@
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex flex-column justify-content-center">
+                            <label class="form-label-custom mb-1">&nbsp;</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="edit-ret-is-special" name="is_special" value="1" <?php echo $_SESSION['role_name'] !== 'Owner' ? 'disabled' : ''; ?>>
+                                <label class="form-check-label fw-bold text-warning small" for="edit-ret-is-special">
+                                    <i class="fas fa-star"></i> Special Retailer (Dynamic Pricing)
+                                </label>
+                            </div>
                         </div>
                     </div>
 

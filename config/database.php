@@ -1,12 +1,28 @@
 <?php
 // config/database.php
-// Database Connection Configuration using PDO
+// Database Connection Configuration
 
+// ==============================================================================
+// 1. LOCAL DATABASE CONFIG (Comment out when deploying to Live)
+// ==============================================================================
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'root');
+// define('DB_PASS', '');
+// define('DB_NAME', 'navtara_db');
+
+
+// ==============================================================================
+// 2. PRODUCTION DATABASE CONFIG (Uncomment when deploying to Live)
+// ==============================================================================
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'navtara_erp');
+define('DB_USER', 'u345018570_navatara');
+define('DB_PASS', 'Navtara@db#01');
+define('DB_NAME', 'u345018570_navatara');
 
+
+// ==============================================================================
+// 3. DATABASE CONNECTION
+// ==============================================================================
 function getDBConnection()
 {
     static $pdo = null;
@@ -20,16 +36,7 @@ function getDBConnection()
             ];
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            // If database doesn't exist, connect to host first to run installation
-            try {
-                $dsnHost = "mysql:host=" . DB_HOST . ";charset=utf8mb4";
-                $pdoHost = new PDO($dsnHost, DB_USER, DB_PASS, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-                ]);
-                return $pdoHost;
-            } catch (PDOException $ex) {
-                die("Critical Error: Database Connection Failed. " . $ex->getMessage());
-            }
+            die("Database Connection Failed: " . $e->getMessage());
         }
     }
     return $pdo;

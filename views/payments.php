@@ -12,7 +12,39 @@
     </div>
 </div>
 
-<div class="custom-card">
+<!-- Collections Summary Metrics Grid -->
+<div class="metrics-grid mb-4">
+    <div class="metric-card success">
+        <div class="metric-info">
+            <span class="label">Total Collection</span>
+            <h3 class="value" id="card-total-collection">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-hand-holding-usd"></i></div>
+    </div>
+    <div class="metric-card info">
+        <div class="metric-info">
+            <span class="label">This Month Collection</span>
+            <h3 class="value" id="card-month-collection">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-calendar-alt"></i></div>
+    </div>
+    <div class="metric-card primary">
+        <div class="metric-info">
+            <span class="label">Today's Collection</span>
+            <h3 class="value" id="card-today-collection">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-bolt"></i></div>
+    </div>
+    <div class="metric-card warning">
+        <div class="metric-info">
+            <span class="label">Total Receivables</span>
+            <h3 class="value" id="card-total-receivables">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+    </div>
+</div>
+
+<div class="custom-card" id="payments-card" data-role="<?php echo htmlspecialchars($_SESSION['role_name'] ?? ''); ?>">
     <div class="custom-card-header d-flex justify-content-between align-items-center">
         <h5 class="custom-card-title mb-0"><i class="fas fa-rupee-sign text-primary"></i> Payment Collections Log</h5>
         <div class="d-flex align-items-center gap-2">
@@ -29,7 +61,7 @@
     </div>
     <div class="custom-card-body p-0">
         <div class="table-responsive">
-            <table id="payments-table" class="table table-custom mb-0">
+            <table id="payments-table" class="table table-custom mb-0" data-role="<?php echo htmlspecialchars($_SESSION['role_name'] ?? ''); ?>">
                 <thead>
                     <tr>
                         <th>Receipt ID</th>
@@ -42,6 +74,9 @@
                         <th>Ref Number</th>
                         <th>Collected By</th>
                         <th>Remarks</th>
+                        <?php if (($_SESSION['role_name'] ?? '') === 'Owner'): ?>
+                        <th class="text-center" style="width: 80px;">Action</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody id="payments-rows">

@@ -30,10 +30,13 @@ if (isset($_GET['view'])) {
         'brands',
         'products',
         'skus',
+        'sku_analytics',
         'discount_slabs',
         'inventory',
         'purchase_entry',
         'retailers',
+        'retailers_outstanding',
+        'top_retailers',
         'staff',
         'orders',
         'billing',
@@ -45,7 +48,8 @@ if (isset($_GET['view'])) {
         'gst_report',
         'beatroute_master',
         'my_beatroute',
-        'place_order'
+        'place_order',
+        'counter_sale'
     ];
     
     if (in_array($view, $allowed_views)) {
@@ -73,6 +77,7 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Navatara Enterprises</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -114,6 +119,11 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                         <a href="#dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
                     </li>
 
+                    <!-- Counter Sale (Both Owner & Sales Staff) -->
+                    <li class="nav-item" data-route="counter_sale">
+                        <a href="#counter_sale" class="fw-bold"><i class="fas fa-cash-register text-warning"></i> Counter Sale</a>
+                    </li>
+
                     <!-- Beat Route (Staff Only) -->
                     <?php if ($roleName !== 'Owner'): ?>
                         <li class="nav-item" data-route="my_beatroute">
@@ -138,6 +148,9 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                         <li class="nav-item" data-route="skus">
                             <a href="#skus"><i class="fas fa-barcode"></i> View SKU's</a>
                         </li>
+                        <li class="nav-item nav-sub-item" data-route="sku_analytics">
+                            <a href="#sku_analytics"><i class="fas fa-chart-line text-info"></i> SKU Analytics</a>
+                        </li>
                         <li class="nav-item" data-route="discount_slabs">
                             <a href="#discount_slabs"><i class="fas fa-percent"></i> Discount Slabs</a>
                         </li>
@@ -151,12 +164,21 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                         <li class="nav-item" data-route="skus">
                             <a href="#skus"><i class="fas fa-barcode"></i> View SKU's</a>
                         </li>
+                        <li class="nav-item nav-sub-item" data-route="sku_analytics">
+                            <a href="#sku_analytics"><i class="fas fa-chart-line text-info"></i> SKU Analytics</a>
+                        </li>
                     <?php endif; ?>
 
                     <!-- Retailers list (Available for both) -->
                     <li class="nav-item" data-route="retailers">
                         <a href="#retailers"><i class="fas fa-store"></i>
                             <?php echo $roleName === 'Owner' ? 'Retailer Profiles' : 'My Retailers'; ?></a>
+                    </li>
+                    <li class="nav-item nav-sub-item" data-route="retailers_outstanding">
+                        <a href="#retailers_outstanding"><i class="fas fa-file-invoice-dollar text-warning"></i> Retailers Outstanding logs</a>
+                    </li>
+                    <li class="nav-item nav-sub-item" data-route="top_retailers">
+                        <a href="#top_retailers"><i class="fas fa-trophy text-warning"></i> Top Purchasing Retailers</a>
                     </li>
 
                     <!-- Staff Accounts (Owner Only) -->
@@ -169,6 +191,9 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                     <!-- Orders (Placing for Staff, reviewing for Owner) -->
                     <li class="nav-item" data-route="orders">
                         <a href="#orders"><i class="fas fa-shopping-basket"></i> Sales Orders</a>
+                    </li>
+                    <li class="nav-item" data-route="return_logs">
+                        <a href="#return_logs"><i class="fas fa-undo-alt text-danger"></i> Return Logs</a>
                     </li>
 
                     <!-- Billing & Invoices -->
@@ -192,7 +217,7 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                             <a href="#accounting"><i class="fas fa-calculator"></i> Accounting Ledger</a>
                         </li>
                         <li class="nav-item" data-route="reports">
-                            <a href="#reports"><i class="fas fa-chart-bar"></i> Excel Reports</a>
+                            <a href="#reports"><i class="fas fa-chart-bar"></i> Reports</a>
                         </li>
                         <li class="nav-item" data-route="gst_report">
                             <a href="#gst_report"><i class="fas fa-percent"></i> GST Report</a>
@@ -228,7 +253,13 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                         </h4>
                     </div>
 
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
+                        <!-- Top Navbar Counter Sale Button (Always visible on mobile & desktop) -->
+                        <a href="#counter_sale" class="btn btn-warning fw-bold d-flex align-items-center gap-2 px-3 py-1 shadow-sm rounded-pill btn-counter-sale-top" id="top-nav-counter-sale-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #111827;">
+                            <i class="fas fa-cash-register"></i>
+                            <span class="d-inline">Counter Sale</span>
+                        </a>
+
                         <div class="dropdown">
                             <button
                                 class="btn btn-outline-secondary border-secondary dropdown-toggle text-white d-flex align-items-center gap-2"
@@ -237,6 +268,8 @@ $photo = $_SESSION['photo'] ?? 'assets/images/default-avatar.png';
                                     class="d-none d-sm-inline"><?php echo htmlspecialchars($fullname); ?></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark border-secondary bg-dark shadow">
+                                <li><a class="dropdown-item py-2" href="#counter_sale"><i
+                                            class="fas fa-cash-register me-2 text-warning"></i> Counter Sale</a></li>
                                 <li><a class="dropdown-item py-2" href="#retailers"><i
                                             class="fas fa-store me-2 text-info"></i> Retailers</a></li>
                                 <li>

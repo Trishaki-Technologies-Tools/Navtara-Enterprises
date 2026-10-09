@@ -21,23 +21,29 @@ $fullname = $_SESSION['fullname'];
 
 <!-- QUICK ACTIONS BAR -->
 <div class="custom-card mb-4">
-    <div class="custom-card-header">
-        <h5 class="custom-card-title"><i class="fas fa-bolt text-warning"></i> Quick Actions</h5>
+    <div class="custom-card-header bg-dark d-flex justify-content-between align-items-center py-3">
+        <h5 class="custom-card-title mb-0"><i class="fas fa-bolt text-warning me-2"></i>Quick Actions</h5>
     </div>
     <div class="custom-card-body py-3">
-        <div class="quick-action-row">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Counter Sale -->
+            <a href="#counter_sale" class="btn btn-warning fw-bold shadow-sm d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #111827;">
+                <i class="fas fa-cash-register"></i> Counter Sale (POS)
+            </a>
+
             <?php if ($roleName === 'Owner'): ?>
-                <a href="#retailers" class="btn btn-action secondary"><i class="fas fa-plus"></i> Add Retailer</a>
-                <a href="#skus" class="btn btn-action secondary"><i class="fas fa-barcode"></i> Manage SKUs</a>
-                <a href="#inventory" class="btn btn-action secondary"><i class="fas fa-boxes"></i> Inventory Ledger</a>
-                <a href="#orders" class="btn btn-action secondary"><i class="fas fa-check-double"></i> Review Orders</a>
-                <a href="#accounting" class="btn btn-action secondary"><i class="fas fa-calculator"></i> Cash Book</a>
-                <a href="#settings" class="btn btn-action secondary"><i class="fas fa-cogs"></i> ERP Settings</a>
+                <a href="#orders" class="btn btn-action primary"><i class="fas fa-shopping-basket me-1"></i> Sales Orders</a>
+                <a href="#purchase_entry" class="btn btn-action secondary"><i class="fas fa-truck-loading me-1"></i> Purchase Entry</a>
+                <a href="#retailers" class="btn btn-action secondary"><i class="fas fa-user-plus me-1"></i> Add Retailer</a>
+                <a href="#payments" class="btn btn-action secondary"><i class="fas fa-rupee-sign me-1"></i> Collect Payment</a>
+                <a href="#accounting" class="btn btn-action secondary"><i class="fas fa-wallet me-1"></i> Add Expense</a>
+                <a href="#inventory" class="btn btn-action secondary"><i class="fas fa-boxes me-1"></i> Stock Ledger</a>
+                <a href="#reports" class="btn btn-action secondary"><i class="fas fa-chart-bar me-1"></i> Reports</a>
             <?php else: ?>
-                <a href="#retailers" class="btn btn-action primary"><i class="fas fa-user-plus"></i> New Retailer</a>
-                <a href="#orders" class="btn btn-action primary"><i class="fas fa-shopping-basket"></i> Create Order</a>
-                <a href="#payments" class="btn btn-action primary"><i class="fas fa-rupee-sign"></i> Collect Payment</a>
-                <a href="#retailers" class="btn btn-action secondary"><i class="fas fa-map-marker-alt"></i> Visit Status</a>
+                <a href="#place_order" class="btn btn-action primary"><i class="fas fa-phone-volume me-1"></i> Place Order</a>
+                <a href="#retailers" class="btn btn-action primary"><i class="fas fa-user-plus me-1"></i> New Retailer</a>
+                <a href="#payments" class="btn btn-action primary"><i class="fas fa-rupee-sign me-1"></i> Collect Payment</a>
+                <a href="#my_beatroute" class="btn btn-action secondary"><i class="fas fa-route me-1"></i> My Routes</a>
             <?php endif; ?>
         </div>
     </div>

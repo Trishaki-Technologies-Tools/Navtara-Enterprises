@@ -39,11 +39,15 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="set-company-gst" class="form-label-custom">GSTIN Registration <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-custom" id="set-company-gst" name="company_gst" required placeholder="e.g. 30ABCDE1234F1Z0">
+                            <input type="text" class="form-control form-control-custom" id="set-company-gst" name="company_gst" required placeholder="e.g. 29APPPJ6887A1ZD">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="set-company-state" class="form-label-custom">Operating State (Place of Supply) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-custom" id="set-company-state" name="company_state" required placeholder="e.g. Karnataka">
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label for="set-invoice-prefix" class="form-label-custom">Invoice Prefix <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-custom" id="set-invoice-prefix" name="invoice_prefix" required placeholder="e.g. NE/2026-27/">
                         </div>
@@ -63,22 +67,22 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="set-bank-name" class="form-label-custom">Bank Name</label>
-                            <input type="text" class="form-control form-control-custom" id="set-bank-name" name="bank_name" placeholder="e.g. UNION BANK OF INDIA">
+                            <input type="text" class="form-control form-control-custom" id="set-bank-name" name="bank_name" placeholder="e.g. CANARA BANK">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="set-bank-acc" class="form-label-custom">Bank Account Number</label>
-                            <input type="text" class="form-control form-control-custom" id="set-bank-acc" name="bank_account_no" placeholder="e.g. 374001010036235">
+                            <input type="text" class="form-control form-control-custom" id="set-bank-acc" name="bank_account_no" placeholder="e.g. 120040650849">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="set-bank-ifsc" class="form-label-custom">Bank IFSC Code</label>
-                            <input type="text" class="form-control form-control-custom" id="set-bank-ifsc" name="bank_ifsc" placeholder="e.g. UBIN0537403">
+                            <input type="text" class="form-control form-control-custom" id="set-bank-ifsc" name="bank_ifsc" placeholder="e.g. CNRB0002537">
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="set-bank-branch" class="form-label-custom">Bank Branch &amp; City</label>
-                            <input type="text" class="form-control form-control-custom" id="set-bank-branch" name="bank_branch" placeholder="e.g. SHAHA PUR BELAGAVI">
+                            <input type="text" class="form-control form-control-custom" id="set-bank-branch" name="bank_branch" placeholder="e.g. BELAGAVI">
                         </div>
                     </div>
                     

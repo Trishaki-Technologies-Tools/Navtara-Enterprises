@@ -17,7 +17,7 @@ $db = getDBConnection();
 try {
     // Fetch Invoice Header
     $stmt = $db->prepare("
-        SELECT i.*, r.name as owner_name, r.name as retailer_name, r.state as retailer_state, r.credit_limit, r.mobile as retailer_mobile
+        SELECT i.*, r.name as owner_name, r.name as retailer_name, r.state as retailer_state, r.credit_limit, r.mobile as retailer_mobile, r.address as retailer_address, r.area as retailer_area, r.city as retailer_city, r.pin_code as retailer_pin_code, r.gst_number as current_retailer_gst
         FROM invoices i
         JOIN retailers r ON i.retailer_id = r.id
         WHERE i.id = ?
@@ -32,6 +32,29 @@ try {
     // Decode Company Details and Retailer Details
     $company = json_decode($invoice['company_details'], true);
     $retailer = json_decode($invoice['retailer_details'], true);
+
+    $shopName = !empty($retailer['shop_name']) ? $retailer['shop_name'] : ($invoice['retailer_name'] ?? '');
+    
+    // Determine customer address
+    $customerAddress = !empty($retailer['address']) ? trim($retailer['address']) : (!empty($invoice['retailer_address']) ? trim($invoice['retailer_address']) : '');
+    $customerArea = !empty($retailer['area']) ? trim($retailer['area']) : (!empty($invoice['retailer_area']) ? trim($invoice['retailer_area']) : '');
+    $customerCity = !empty($retailer['city']) ? trim($retailer['city']) : (!empty($invoice['retailer_city']) ? trim($invoice['retailer_city']) : '');
+    $customerPin = !empty($retailer['pin_code']) ? trim($retailer['pin_code']) : (!empty($invoice['retailer_pin_code']) ? trim($invoice['retailer_pin_code']) : '');
+    
+    $extraLoc = [];
+    if (!empty($customerArea) && stripos($customerAddress, $customerArea) === false) $extraLoc[] = $customerArea;
+    if (!empty($customerCity) && stripos($customerAddress, $customerCity) === false) $extraLoc[] = $customerCity;
+    if (!empty($customerPin) && stripos($customerAddress, $customerPin) === false) $extraLoc[] = $customerPin;
+    if (!empty($extraLoc)) {
+        $customerAddress = rtrim($customerAddress, ', ') . ($customerAddress ? ', ' : '') . implode(', ', $extraLoc);
+    }
+    if (empty($customerAddress)) {
+        $customerAddress = 'N/A';
+    }
+    
+    // Determine customer GST
+    $customerGst = !empty($retailer['gst_number']) ? trim($retailer['gst_number']) : (!empty($invoice['current_retailer_gst']) ? trim($invoice['current_retailer_gst']) : '');
+    $customerGstDisplay = !empty($customerGst) ? $customerGst : 'N/A';
     
     // Fetch Invoice Items
     $stmtItems = $db->prepare("
@@ -493,15 +516,13 @@ $roundedGrandTotal = round($rawGrandTotal);
             <tr>
                 <td class="left-col">
                     <div style="font-size: 9px; text-transform: uppercase; color: #555; margin-bottom: 2px; font-weight: bold;">Billed To:</div>
-                    <div style="font-size: 12px; font-weight: bold;"><?php echo htmlspecialchars($retailer['shop_name']); ?></div>
+                    <div style="font-size: 12px; font-weight: bold;"><?php echo htmlspecialchars($shopName); ?></div>
                     <div style="margin-top: 3px; line-height: 1.3;">
-                        <?php echo nl2br(htmlspecialchars($retailer['address'])); ?><br>
+                        <?php echo nl2br(htmlspecialchars($customerAddress)); ?><br>
                         <?php if (!empty($invoice['retailer_mobile'])): ?>
                             Ph : <?php echo htmlspecialchars($invoice['retailer_mobile']); ?><br>
                         <?php endif; ?>
-                        <?php if (!empty($retailer['gst_number'])): ?>
-                            <strong>GSTIN:</strong> <?php echo htmlspecialchars($retailer['gst_number']); ?><br>
-                        <?php endif; ?>
+                        <strong>GSTIN:</strong> <?php echo htmlspecialchars($customerGstDisplay); ?><br>
                     </div>
                 </td>
                 <td>

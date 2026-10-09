@@ -40,6 +40,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             sendJSON('error', 'Failed to fetch orders: ' . $e->getMessage());
         }
     }
+
+    if ($action === 'stats') {
+        try {
+            if ($roleName === 'Owner') {
+                $stmtDaily = $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE order_date = CURDATE() AND status != 'Cancelled'");
+                $dailySales = (float)$stmtDaily->fetchColumn();
+
+                $stmtMonthly = $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE MONTH(order_date) = MONTH(CURDATE()) AND YEAR(order_date) = YEAR(CURDATE()) AND status != 'Cancelled'");
+                $monthlySales = (float)$stmtMonthly->fetchColumn();
+
+                $stmtOverall = $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE status != 'Cancelled'");
+                $overallSales = (float)$stmtOverall->fetchColumn();
+
+                $stmtPending = $db->query("SELECT COUNT(*) FROM orders WHERE status = 'Pending'");
+                $pendingOrders = (int)$stmtPending->fetchColumn();
+            } else {
+                $stmtDaily = $db->prepare("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE staff_id = ? AND order_date = CURDATE() AND status != 'Cancelled'");
+                $stmtDaily->execute([$userId]);
+                $dailySales = (float)$stmtDaily->fetchColumn();
+
+                $stmtMonthly = $db->prepare("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE staff_id = ? AND MONTH(order_date) = MONTH(CURDATE()) AND YEAR(order_date) = YEAR(CURDATE()) AND status != 'Cancelled'");
+                $stmtMonthly->execute([$userId]);
+                $monthlySales = (float)$stmtMonthly->fetchColumn();
+
+                $stmtOverall = $db->prepare("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE staff_id = ? AND status != 'Cancelled'");
+                $stmtOverall->execute([$userId]);
+                $overallSales = (float)$stmtOverall->fetchColumn();
+
+                $stmtPending = $db->prepare("SELECT COUNT(*) FROM orders WHERE staff_id = ? AND status = 'Pending'");
+                $stmtPending->execute([$userId]);
+                $pendingOrders = (int)$stmtPending->fetchColumn();
+            }
+
+            sendJSON('success', 'Order stats loaded.', [
+                'daily_sales' => $dailySales,
+                'monthly_sales' => $monthlySales,
+                'overall_sales' => $overallSales,
+                'pending_orders' => $pendingOrders
+            ]);
+        } catch (PDOException $e) {
+            sendJSON('error', 'Failed to fetch order stats: ' . $e->getMessage());
+        }
+    }
     
     if ($action === 'detail') {
         $id = (int)($_GET['id'] ?? 0);
@@ -68,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($order) {
                 // Fetch order items
                 $stmtItems = $db->prepare("
-                    SELECT oi.*, s.sku_name, s.sku_code, s.unit, s.current_stock
+                    SELECT oi.*, s.sku_name, s.sku_code, s.unit, s.current_stock, s.purchase_price, s.allow_dynamic_price, s.selling_price as catalog_price
                     FROM order_items oi
                     JOIN skus s ON oi.sku_id = s.id
                     WHERE oi.order_id = ?
@@ -97,12 +140,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Cart arrays
         $sku_ids = $_POST['sku_ids'] ?? [];
         $quantities = $_POST['quantities'] ?? [];
-        $discounts = $_POST['discounts'] ?? []; // Discount percentages or flat (let's implement as flat rupee discount per line)
+        $prices = $_POST['prices'] ?? [];
+        $discounts = $_POST['discounts'] ?? []; // Discount per line/unit
         
         if ($retailer_id <= 0 || empty($sku_ids) || count($sku_ids) !== count($quantities)) {
             sendJSON('error', 'Please select a retailer and add at least one item.');
         }
         
+        // Check if retailer is Active and whether it's a Special Retailer
+        $chkStatus = $db->prepare("SELECT status, is_special FROM retailers WHERE id = ?");
+        $chkStatus->execute([$retailer_id]);
+        $retData = $chkStatus->fetch();
+        if (!$retData) {
+            sendJSON('error', 'Retailer not found.');
+        }
+        if ($retData['status'] !== 'Active') {
+            sendJSON('error', 'Cannot place order for an Inactive retailer.');
+        }
+        $isSpecialRetailer = ((int)($retData['is_special'] ?? 0) === 1);
+
         // Basic check for assigned staff
         if ($roleName !== 'Owner') {
             $chk = $db->prepare("
@@ -153,9 +209,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($qty <= 0) continue;
                 
-                // Fetch SKU price and GST details
+                // Fetch SKU price, dynamic permission, purchase price, and GST details
                 $stmtSku = $db->prepare("
-                    SELECT s.selling_price, s.gst_percentage, s.sku_name, s.sku_code, s.current_stock
+                    SELECT s.selling_price, s.purchase_price, s.gst_percentage, s.sku_name, s.sku_code, s.current_stock, s.allow_dynamic_price
                     FROM skus s 
                     WHERE s.id = ? AND s.status = 'Active'
                 ");
@@ -174,12 +230,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtDeduct = $db->prepare("UPDATE skus SET current_stock = current_stock - ? WHERE id = ?");
                 $stmtDeduct->execute([$qty, $sku_id]);
                 
-                $price = (float)$sku['selling_price'];
+                $catalogPrice = (float)$sku['selling_price'];
+                $purchasePrice = (float)($sku['purchase_price'] ?? 0);
+                $allowDynamic = ((int)$sku['allow_dynamic_price'] === 1 || $roleName === 'Owner' || $isSpecialRetailer);
+                
+                if ($allowDynamic && isset($prices[$i]) && is_numeric($prices[$i]) && (float)$prices[$i] >= 0) {
+                    $price = (float)$prices[$i];
+                } else {
+                    $price = $catalogPrice;
+                }
+                
+                // Restriction: Rate cannot go below purchase rate
+                if ($purchasePrice > 0) {
+                    if ($price < $purchasePrice) {
+                        throw new Exception("Rate for '{$sku['sku_name']}' (₹" . number_format($price, 2) . ") cannot be lower than purchase rate of ₹" . number_format($purchasePrice, 2) . ".");
+                    }
+                    if (($price - $disc) < $purchasePrice) {
+                        throw new Exception("Net rate after discount for '{$sku['sku_name']}' (₹" . number_format($price - $disc, 2) . ") cannot be lower than purchase rate of ₹" . number_format($purchasePrice, 2) . ".");
+                    }
+                }
+                
                 $item_subtotal = $price * $qty;
                 
                 // Line discount (flat amount)
-                $item_disc = min($item_subtotal, $disc * $qty); 
-                $taxable_value = $item_subtotal - $item_disc;
+                $item_disc = min($item_subtotal, max(0, $disc * $qty)); 
+                $taxable_value = max(0, $item_subtotal - $item_disc);
                 
                 // Calculate GST on top of taxable value
                 $gst_pct = (float)$sku['gst_percentage'];

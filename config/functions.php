@@ -106,6 +106,39 @@ function getSetting($key, $default = '') {
 }
 
 /**
+ * Get registered company state with auto-detection from GSTIN prefix
+ */
+function getCompanyState() {
+    $state = getSetting('company_state', '');
+    if (!empty($state)) {
+        return trim($state);
+    }
+    
+    // Auto-detect from Company GSTIN registration
+    $gstin = trim(getSetting('company_gst', ''));
+    if (!empty($gstin) && strlen($gstin) >= 2) {
+        $prefix = substr($gstin, 0, 2);
+        $stateMap = [
+            '29' => 'Karnataka',
+            '30' => 'Goa',
+            '27' => 'Maharashtra',
+            '33' => 'Tamil Nadu',
+            '32' => 'Kerala',
+            '36' => 'Telangana',
+            '37' => 'Andhra Pradesh',
+            '24' => 'Gujarat',
+            '08' => 'Rajasthan',
+            '07' => 'Delhi'
+        ];
+        if (isset($stateMap[$prefix])) {
+            return $stateMap[$prefix];
+        }
+    }
+    
+    return 'Karnataka';
+}
+
+/**
  * Format Currency into Indian Rupees (INR)
  */
 function formatRupees($amount) {

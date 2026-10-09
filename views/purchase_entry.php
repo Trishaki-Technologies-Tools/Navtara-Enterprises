@@ -80,8 +80,8 @@
                         <div class="row align-items-end g-3">
                             <div class="col-md-2">
                                 <label for="filter-category" class="form-label-custom">Select Category</label>
-                                <select class="form-select form-control-custom" id="filter-category">
-                                    <option value="">-- Choose Category --</option>
+                                <select class="form-select form-control-custom" id="filter-category" disabled>
+                                    <option value="">-- Choose Supplier First --</option>
                                 </select>
                             </div>
                             <div class="col-md-2">

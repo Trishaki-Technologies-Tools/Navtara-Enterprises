@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.2.2
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:3306
--- Generation Time: Jul 25, 2026 at 11:50 AM
--- Server version: 10.4.25-MariaDB
--- PHP Version: 8.1.10
+-- Host: 127.0.0.1:3306
+-- Generation Time: Oct 09, 2026 at 03:29 PM
+-- Server version: 11.8.9-MariaDB-log
+-- PHP Version: 7.2.34
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `navtara_erp`
+-- Database: `u345018570_navatara`
 --
 
 -- --------------------------------------------------------
@@ -30,9 +30,9 @@ SET time_zone = "+00:00";
 CREATE TABLE `activity_logs` (
   `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `action` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -45,10 +45,10 @@ CREATE TABLE `activity_logs` (
 CREATE TABLE `brands` (
   `id` int(11) NOT NULL,
   `supplier_id` int(11) DEFAULT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `logo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  `name` varchar(100) NOT NULL,
+  `logo` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -61,14 +61,14 @@ CREATE TABLE `brands` (
 CREATE TABLE `customer_ledger` (
   `id` int(11) NOT NULL,
   `retailer_id` int(11) NOT NULL,
-  `transaction_type` enum('Invoice','Payment','Opening Balance','Adjustment') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `transaction_type` enum('Invoice','Payment','Opening Balance','Adjustment') NOT NULL,
   `transaction_date` date NOT NULL,
   `reference_id` int(11) DEFAULT NULL,
-  `reference_type` enum('Invoices','Payments','None') COLLATE utf8mb4_unicode_ci DEFAULT 'None',
+  `reference_type` enum('Invoices','Payments','None') DEFAULT 'None',
   `debit_amount` decimal(12,2) DEFAULT 0.00,
   `credit_amount` decimal(12,2) DEFAULT 0.00,
   `balance` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -80,16 +80,16 @@ CREATE TABLE `customer_ledger` (
 
 CREATE TABLE `expenses` (
   `id` int(11) NOT NULL,
-  `category` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` varchar(100) NOT NULL,
   `amount` decimal(10,2) NOT NULL,
   `gst_percentage` decimal(5,2) DEFAULT 0.00,
   `gst_amount` decimal(10,2) DEFAULT 0.00,
   `expense_date` date NOT NULL,
-  `paid_to` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `paid_to` varchar(100) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Cash'
+  `payment_method` varchar(50) NOT NULL DEFAULT 'Cash'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -109,7 +109,7 @@ CREATE TABLE `expiry_records` (
   `status` varchar(50) DEFAULT 'Collected',
   `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -120,13 +120,13 @@ CREATE TABLE `expiry_records` (
 CREATE TABLE `inventory_history` (
   `id` int(11) NOT NULL,
   `sku_id` int(11) NOT NULL,
-  `transaction_type` enum('Opening Stock','Stock Addition','Stock Reduction','Manual Adjustment','Purchase Entry','Invoice Reduction') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `transaction_type` enum('Opening Stock','Stock Addition','Stock Reduction','Manual Adjustment','Purchase Entry','Invoice Reduction') NOT NULL,
   `quantity` int(11) NOT NULL,
   `previous_stock` int(11) NOT NULL,
   `new_stock` int(11) NOT NULL,
   `reference_id` int(11) DEFAULT NULL,
-  `reference_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reference_type` varchar(50) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -140,19 +140,19 @@ CREATE TABLE `invoices` (
   `id` int(11) NOT NULL,
   `order_id` int(11) DEFAULT NULL,
   `retailer_id` int(11) NOT NULL,
-  `invoice_number` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `invoice_type` enum('GST Invoice','Non GST Invoice','Cash Invoice','Credit Invoice') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `invoice_number` varchar(50) NOT NULL,
+  `invoice_type` enum('GST Invoice','Non GST Invoice','Cash Invoice','Credit Invoice') NOT NULL,
   `invoice_date` date NOT NULL,
-  `company_details` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `retailer_details` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `company_details` text DEFAULT NULL,
+  `retailer_details` text DEFAULT NULL,
   `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
   `discount_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `gst_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `grand_total` decimal(12,2) NOT NULL DEFAULT 0.00,
   `paid_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `outstanding_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `payment_status` enum('Unpaid','Partially Paid','Paid') COLLATE utf8mb4_unicode_ci DEFAULT 'Unpaid',
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `payment_status` enum('Unpaid','Partially Paid','Paid') DEFAULT 'Unpaid',
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -166,8 +166,8 @@ CREATE TABLE `invoice_items` (
   `id` int(11) NOT NULL,
   `invoice_id` int(11) NOT NULL,
   `sku_id` int(11) NOT NULL,
-  `sku_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sku_name` varchar(150) NOT NULL,
+  `sku_code` varchar(50) NOT NULL,
   `quantity` int(11) NOT NULL,
   `purchase_price` decimal(10,2) NOT NULL,
   `selling_price` decimal(10,2) NOT NULL,
@@ -192,9 +192,9 @@ CREATE TABLE `orders` (
   `discount_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `gst_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `grand_total` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `status` enum('Pending','Approved','Processing','Completed','Cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'Pending',
-  `order_mode` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'By Route',
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('Pending','Approved','Processing','Completed','Cancelled') DEFAULT 'Pending',
+  `order_mode` varchar(20) DEFAULT 'By Route',
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -227,11 +227,11 @@ CREATE TABLE `payments` (
   `retailer_id` int(11) NOT NULL,
   `invoice_id` int(11) DEFAULT NULL,
   `payment_date` date NOT NULL,
-  `payment_type` enum('Partial Payment','Full Payment','Advance Payment','Credit Adjustment') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `payment_method` enum('Cash','UPI','Bank Transfer','Cheque','Card','NEFT','RTGS','IMPS') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `payment_type` enum('Partial Payment','Full Payment','Advance Payment','Credit Adjustment') NOT NULL,
+  `payment_method` enum('Cash','UPI','Bank Transfer','Cheque','Card','NEFT','RTGS','IMPS') NOT NULL,
   `amount` decimal(12,2) NOT NULL,
-  `reference_number` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reference_number` varchar(100) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `collected_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -245,12 +245,12 @@ CREATE TABLE `payments` (
 CREATE TABLE `products` (
   `id` int(11) NOT NULL,
   `brand_id` int(11) NOT NULL,
-  `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
   `gst_percentage` decimal(5,2) DEFAULT 18.00,
-  `hsn_code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  `hsn_code` varchar(20) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -262,14 +262,14 @@ CREATE TABLE `products` (
 
 CREATE TABLE `purchases` (
   `id` int(11) NOT NULL,
-  `supplier_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `supplier_invoice` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `supplier_name` varchar(150) NOT NULL,
+  `supplier_invoice` varchar(100) NOT NULL,
   `purchase_date` date NOT NULL,
   `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
   `discount_amount` decimal(12,2) DEFAULT 0.00,
   `gst_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `grand_total` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -299,28 +299,28 @@ CREATE TABLE `purchase_items` (
 
 CREATE TABLE `retailers` (
   `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `owner_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `shop_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `gst_number` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mobile` varchar(15) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `alternate_mobile` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `address` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `area` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `city` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `state` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Goa',
-  `pin_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `google_map_link` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `business_type` enum('Distributor','Wholesaler','Retail Shop','Medical','Super Market','General Store') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Retail Shop',
+  `name` varchar(100) NOT NULL,
+  `owner_name` varchar(100) DEFAULT NULL,
+  `shop_name` varchar(150) NOT NULL,
+  `gst_number` varchar(15) DEFAULT NULL,
+  `mobile` varchar(15) NOT NULL,
+  `alternate_mobile` varchar(15) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `address` text NOT NULL,
+  `area` varchar(100) NOT NULL,
+  `city` varchar(50) NOT NULL,
+  `state` varchar(50) NOT NULL DEFAULT 'Goa',
+  `pin_code` varchar(10) NOT NULL,
+  `google_map_link` text DEFAULT NULL,
+  `business_type` enum('Distributor','Wholesaler','Retail Shop','Medical','Super Market','General Store') NOT NULL DEFAULT 'Retail Shop',
   `created_by_staff_id` int(11) DEFAULT NULL,
   `assigned_staff_id` int(11) DEFAULT NULL,
   `credit_limit` decimal(12,2) DEFAULT 50000.00,
   `outstanding_amount` decimal(12,2) DEFAULT 0.00,
   `opening_balance` decimal(12,2) DEFAULT 0.00,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
-  `visit_frequency` enum('Daily','Weekly','Bi-Weekly','Monthly') COLLATE utf8mb4_unicode_ci DEFAULT 'Weekly',
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `visit_frequency` enum('Daily','Weekly','Bi-Weekly','Monthly') DEFAULT 'Weekly',
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -335,8 +335,8 @@ CREATE TABLE `retailer_timeline` (
   `retailer_id` int(11) NOT NULL,
   `staff_id` int(11) NOT NULL,
   `visit_date` date NOT NULL,
-  `visit_status` enum('Visited - Order Taken','Visited - No Order','Visited - Payment Collected','Called Retailer','Closed') COLLATE utf8mb4_unicode_ci DEFAULT 'Visited - No Order',
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `visit_status` enum('Visited - Order Taken','Visited - No Order','Visited - Payment Collected','Called Retailer','Closed') DEFAULT 'Visited - No Order',
+  `remarks` text DEFAULT NULL,
   `location_lat` decimal(10,8) DEFAULT NULL,
   `location_lng` decimal(11,8) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -350,8 +350,8 @@ CREATE TABLE `retailer_timeline` (
 
 CREATE TABLE `roles` (
   `id` int(11) NOT NULL,
-  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(50) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -365,7 +365,7 @@ CREATE TABLE `routes` (
   `id` int(11) NOT NULL,
   `route_name` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -378,7 +378,7 @@ CREATE TABLE `route_retailers` (
   `route_id` int(11) NOT NULL,
   `retailer_id` int(11) NOT NULL,
   `sequence_order` int(11) DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -390,8 +390,8 @@ CREATE TABLE `route_schedules` (
   `id` int(11) NOT NULL,
   `route_id` int(11) NOT NULL,
   `staff_id` int(11) DEFAULT NULL,
-  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+  `notes` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -406,7 +406,7 @@ CREATE TABLE `salesman_routes` (
   `staff_id` int(11) NOT NULL,
   `day_of_week` varchar(20) NOT NULL,
   `route_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -418,7 +418,7 @@ CREATE TABLE `sales_staff_details` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `route_id` int(11) DEFAULT NULL,
-  `assigned_area` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assigned_area` varchar(100) DEFAULT NULL,
   `salary` decimal(10,2) DEFAULT 0.00,
   `sales_target` decimal(10,2) DEFAULT 0.00,
   `joining_date` date DEFAULT NULL
@@ -432,8 +432,8 @@ CREATE TABLE `sales_staff_details` (
 
 CREATE TABLE `settings` (
   `id` int(11) NOT NULL,
-  `key_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `val_value` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `key_name` varchar(100) NOT NULL,
+  `val_value` text DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -446,18 +446,18 @@ CREATE TABLE `settings` (
 CREATE TABLE `skus` (
   `id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `sku_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sku_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sku_name` varchar(100) NOT NULL,
+  `sku_code` varchar(50) NOT NULL,
   `purchase_price` decimal(10,2) NOT NULL,
   `selling_price` decimal(10,2) NOT NULL,
   `mrp` decimal(10,2) NOT NULL,
   `gst_percentage` decimal(5,2) NOT NULL DEFAULT 18.00,
-  `unit` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pcs',
-  `weight` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `size` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `unit` varchar(20) NOT NULL DEFAULT 'Pcs',
+  `weight` varchar(20) DEFAULT NULL,
+  `size` varchar(20) DEFAULT NULL,
   `current_stock` int(11) DEFAULT 0,
   `minimum_stock` int(11) DEFAULT 5,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  `status` enum('Active','Inactive') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -470,11 +470,11 @@ CREATE TABLE `skus` (
 CREATE TABLE `sku_discounts` (
   `id` int(11) NOT NULL,
   `sku_id` int(11) NOT NULL,
-  `discount_type` enum('Quantity Slab','Flat Rate') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `discount_type` enum('Quantity Slab','Flat Rate') NOT NULL,
   `min_qty` int(11) DEFAULT 0,
   `max_qty` int(11) DEFAULT 999999,
   `discount_value` decimal(10,2) NOT NULL,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  `status` enum('Active','Inactive') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -499,15 +499,15 @@ CREATE TABLE `staff_routes` (
 
 CREATE TABLE `suppliers` (
   `id` int(11) NOT NULL,
-  `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `gst_number` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `address` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `fssai_license` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `acc_number` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `bank_branch` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `bank_place` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `acc_holder` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `payment_mode` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `gst_number` varchar(15) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `fssai_license` varchar(50) DEFAULT NULL,
+  `acc_number` varchar(50) DEFAULT NULL,
+  `bank_branch` varchar(100) DEFAULT NULL,
+  `bank_place` varchar(100) DEFAULT NULL,
+  `acc_holder` varchar(150) DEFAULT NULL,
+  `payment_mode` varchar(50) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -519,12 +519,12 @@ CREATE TABLE `suppliers` (
 
 CREATE TABLE `supplier_payments` (
   `id` int(11) NOT NULL,
-  `supplier_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `supplier_name` varchar(150) NOT NULL,
   `payment_date` date NOT NULL,
   `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `payment_mode` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `reference_number` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `remarks` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `payment_mode` varchar(50) NOT NULL,
+  `reference_number` varchar(100) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -537,13 +537,13 @@ CREATE TABLE `supplier_payments` (
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `role_id` int(11) NOT NULL,
-  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `fullname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mobile` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `photo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` enum('Active','Inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
+  `username` varchar(50) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `fullname` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `mobile` varchar(15) DEFAULT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

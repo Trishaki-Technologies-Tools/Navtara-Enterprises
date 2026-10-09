@@ -112,6 +112,9 @@ $(document).ready(function () {
                     case 'skus':
                         loadSkus();
                         break;
+                    case 'sku_analytics':
+                        loadSkuAnalytics();
+                        break;
                     case 'discount_slabs':
                         loadDiscountSlabs();
                         break;
@@ -124,11 +127,20 @@ $(document).ready(function () {
                     case 'retailers':
                         loadRetailers();
                         break;
+                    case 'retailers_outstanding':
+                        loadRetailersOutstanding();
+                        break;
+                    case 'top_retailers':
+                        loadTopRetailers();
+                        break;
                     case 'staff':
                         loadStaff();
                         break;
                     case 'orders':
                         loadOrders();
+                        break;
+                    case 'return_logs':
+                        loadReturnLogs();
                         break;
                     case 'place_order':
                         loadPlaceOrder();
@@ -141,6 +153,9 @@ $(document).ready(function () {
                         break;
                     case 'accounting':
                         loadAccounting();
+                        break;
+                    case 'reports':
+                        loadReports();
                         break;
                     case 'settings':
                         loadSettings();
@@ -156,6 +171,9 @@ $(document).ready(function () {
                         break;
                     case 'my_beatroute':
                         loadMyBeatRoute();
+                        break;
+                    case 'counter_sale':
+                        loadCounterSale();
                         break;
                 }
             })
@@ -233,8 +251,10 @@ $(document).ready(function () {
 
     // Helper: safely destroy DataTable if it exists
     function safeDestroyTable(tableId) {
-        if ($.fn.DataTable.isDataTable(tableId)) {
-            $(tableId).DataTable().destroy();
+        if (!tableId) return;
+        const selector = (typeof tableId === 'string' && !tableId.startsWith('#') && !tableId.startsWith('.')) ? '#' + tableId : tableId;
+        if ($.fn.DataTable.isDataTable(selector)) {
+            $(selector).DataTable().destroy();
         }
     }
 
@@ -730,13 +750,28 @@ $(document).ready(function () {
                         if (isOwner) {
                             purchaseHtml = `<td class="text-end text-secondary">${formatRupees(item.purchase_price)}</td>`;
                         }
+
+                        let dynamicPricingHtml = '';
+                        if (isOwner) {
+                            if (parseInt(item.allow_dynamic_price) === 1) {
+                                dynamicPricingHtml = `<td><button type="button" class="btn btn-sm btn-outline-warning toggle-dynamic-sku-btn py-0 px-2 fw-bold" data-id="${item.id}" title="Click to toggle dynamic price permission"><i class="fas fa-edit me-1"></i> Dynamic</button></td>`;
+                            } else {
+                                dynamicPricingHtml = `<td><button type="button" class="btn btn-sm btn-outline-secondary toggle-dynamic-sku-btn py-0 px-2" data-id="${item.id}" title="Click to toggle dynamic price permission"><i class="fas fa-lock me-1"></i> Fixed Rate</button></td>`;
+                            }
+                        } else {
+                            if (parseInt(item.allow_dynamic_price) === 1) {
+                                dynamicPricingHtml = `<td><span class="badge bg-warning bg-opacity-25 text-warning border border-warning"><i class="fas fa-edit me-1"></i> Dynamic Rate</span></td>`;
+                            } else {
+                                dynamicPricingHtml = `<td><span class="badge bg-secondary bg-opacity-25 text-secondary"><i class="fas fa-lock me-1"></i> Fixed</span></td>`;
+                            }
+                        }
                         
                         let actionsHtml = '';
                         if (isOwner) {
                             actionsHtml = `
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-warning edit-sku-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger delete-sku-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                                    <button class="btn btn-sm btn-outline-warning edit-sku-btn" data-id="${item.id}" title="Edit SKU"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger delete-sku-btn" data-id="${item.id}" title="Delete SKU"><i class="fas fa-trash"></i></button>
                                 </td>
                             `;
                         }
@@ -753,6 +788,7 @@ $(document).ready(function () {
                                 <td>${item.unit}</td>
                                 <td class="text-center ${stockColor}">${item.current_stock} <small class="text-secondary">/ Min:${item.minimum_stock}</small></td>
                                 <td>${badge}</td>
+                                ${dynamicPricingHtml}
                                 ${actionsHtml}
                             </tr>
                         `);
@@ -769,12 +805,24 @@ $(document).ready(function () {
             });
     }
 
-    $(document).on('click', '#add-sku-btn', function () {
-        $('#sku-gst').val('18.00'); // default
-        populateDropdown('api/products.php?action=list', '#sku-product', '-- Choose Product --', 'id', 'name');
+    $(document).on('click', '.toggle-dynamic-sku-btn', function (e) {
+        e.preventDefault();
+        const skuId = $(this).data('id');
+        $.post('api/skus.php?action=toggle_dynamic_price', { id: skuId }, function (res) {
+            if (res.status === 'success') {
+                showToast('success', res.message);
+                loadSkus();
+            } else {
+                showToast('error', res.message);
+            }
+        });
     });
 
-
+    $(document).on('click', '#add-sku-btn', function () {
+        $('#sku-gst').val('18.00'); // default
+        $('#sku-allow-dynamic').prop('checked', false);
+        populateDropdown('api/products.php?action=list', '#sku-product', '-- Choose Product --', 'id', 'name');
+    });
 
     $(document).on('change', '#sku-product', function () {
         const pid = $(this).val();
@@ -782,7 +830,6 @@ $(document).ready(function () {
             $.get(`api/products.php?action=detail&id=${pid}`, function(res) {
                 if (res.status === 'success') {
                     $('#sku-gst').val(res.data.gst_percentage);
-
                 }
             });
         }
@@ -794,7 +841,6 @@ $(document).ready(function () {
             $.get(`api/products.php?action=detail&id=${pid}`, function(res) {
                 if (res.status === 'success') {
                     $('#edit-sku-gst').val(res.data.gst_percentage);
-
                 }
             });
         }
@@ -832,8 +878,7 @@ $(document).ready(function () {
                         $('#edit-sku-mrp').val(s.mrp);
                         $('#edit-sku-min-stock').val(s.minimum_stock);
                         $('#edit-sku-status').val(s.status);
-                        
-
+                        $('#edit-sku-allow-dynamic').prop('checked', parseInt(s.allow_dynamic_price) === 1);
                         
                         $('#editSkuModal').modal('show');
                     }
@@ -868,6 +913,429 @@ $(document).ready(function () {
                     }
                 });
         }
+    });
+
+    // ----------------------------------------------------
+    // SKU ANALYTICS CONTROLLER
+    // ----------------------------------------------------
+    let activeTopMetric = 'qty';
+    window.currentSkuAnalyticsData = null;
+
+    function destroyChart(key) {
+        if (charts[key]) {
+            charts[key].destroy();
+            delete charts[key];
+        }
+    }
+
+    function renderTopSkusChart(skus, metric) {
+        destroyChart('top_skus');
+        const canvas = document.getElementById('chart-top-skus');
+        if (!canvas || !skus || skus.length === 0) return;
+        
+        // Sort top 10 by selected metric
+        const sorted = [...skus].sort((a, b) => {
+            return metric === 'qty' 
+                ? (b.total_quantity_sold - a.total_quantity_sold)
+                : (b.total_revenue - a.total_revenue);
+        }).slice(0, 10);
+        
+        const labels = sorted.map(s => s.sku_name.length > 18 ? s.sku_name.substring(0, 18) + '...' : s.sku_name);
+        const dataValues = sorted.map(s => metric === 'qty' ? s.total_quantity_sold : s.total_revenue);
+        
+        charts['top_skus'] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: metric === 'qty' ? 'Units Sold' : 'Revenue (₹)',
+                    data: dataValues,
+                    backgroundColor: metric === 'qty' ? 'rgba(59, 130, 246, 0.75)' : 'rgba(16, 185, 129, 0.75)',
+                    borderColor: metric === 'qty' ? '#3b82f6' : '#10b981',
+                    borderWidth: 1.5,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return metric === 'qty' ? `${context.raw} Units` : formatRupees(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#9ca3af', font: { size: 11 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { 
+                            color: '#9ca3af',
+                            callback: function(val) {
+                                return metric === 'qty' ? val : '₹' + val;
+                            }
+                        },
+                        grid: { color: '#374151' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function renderCategoryShareChart(categoryShare) {
+        destroyChart('category_share');
+        const canvas = document.getElementById('chart-category-share');
+        if (!canvas || !categoryShare) return;
+        
+        const labels = Object.keys(categoryShare);
+        const dataValues = labels.map(k => categoryShare[k].revenue || categoryShare[k].qty);
+        
+        if (labels.length === 0 || dataValues.reduce((a, b) => a + b, 0) === 0) {
+            return;
+        }
+        
+        const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+        
+        charts['category_share'] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: palette.slice(0, labels.length),
+                    borderColor: '#111827',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#e5e7eb', font: { size: 11 }, boxWidth: 12, padding: 10 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return ` ${context.label}: ${formatRupees(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    function renderSkuMonthlyTrendChart(monthlyBreakdown) {
+        destroyChart('sku_monthly_trend');
+        const canvas = document.getElementById('chart-sku-monthly-trend');
+        if (!canvas || !monthlyBreakdown) return;
+        
+        const labels = monthlyBreakdown.map(m => m.month_name);
+        const qtyData = monthlyBreakdown.map(m => m.qty);
+        
+        charts['sku_monthly_trend'] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Units Sold',
+                    data: qtyData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const rev = monthlyBreakdown[context.dataIndex].revenue;
+                                return `${context.raw} Units Sold (${formatRupees(rev)})`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#9ca3af', font: { size: 11 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { color: '#9ca3af', precision: 0 },
+                        grid: { color: '#374151' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function loadSkuAnalytics() {
+        safeDestroyTable('#sku-analytics-table');
+        destroyChart('top_skus');
+        destroyChart('category_share');
+        
+        // Populate brand dropdown if empty
+        if ($('#analytics-brand-select option').length <= 1) {
+            populateDropdown('api/brands.php?action=list', '#analytics-brand-select', '-- All Brands --', 'id', 'name');
+        }
+        
+        const month = $('#analytics-month-select').val() || (new Date().getMonth() + 1);
+        const year = $('#analytics-year-select').val() || new Date().getFullYear();
+        const brandId = $('#analytics-brand-select').val() || '';
+        
+        $.get(`api/skus.php?action=analytics&month=${month}&year=${year}&brand_id=${brandId}`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const data = res.data;
+                    window.currentSkuAnalyticsData = data;
+                    const summary = data.summary || {};
+                    const period = data.period || {};
+                    const skus = data.skus || [];
+                    const isOwner = window.userRole === 'Owner';
+                    
+                    // Period Badges
+                    $('#table-period-badge').text(period.month_name || 'Selected Month');
+                    $('#kpi-period-label-units').text(`In ${period.month_name}`);
+                    $('#kpi-period-label-rev').text(`In ${period.month_name}`);
+                    
+                    // Top Volume SKU
+                    if (summary.top_sku_qty) {
+                        $('#kpi-top-sku-qty-name').text(summary.top_sku_qty.sku_name);
+                        $('#kpi-top-sku-qty-val').text(summary.top_sku_qty.total_quantity_sold);
+                        $('#kpi-top-sku-qty-rev').text(formatRupees(summary.top_sku_qty.total_revenue));
+                    } else {
+                        $('#kpi-top-sku-qty-name').text('No sales recorded');
+                        $('#kpi-top-sku-qty-val').text('0');
+                        $('#kpi-top-sku-qty-rev').text('₹0.00');
+                    }
+                    
+                    // Top Revenue SKU
+                    if (summary.top_sku_revenue) {
+                        $('#kpi-top-sku-rev-name').text(summary.top_sku_revenue.sku_name);
+                        $('#kpi-top-sku-rev-val').text(formatRupees(summary.top_sku_revenue.total_revenue));
+                        $('#kpi-top-sku-rev-qty').text(`${summary.top_sku_revenue.total_quantity_sold} units`);
+                    } else {
+                        $('#kpi-top-sku-rev-name').text('No sales recorded');
+                        $('#kpi-top-sku-rev-val').text('₹0.00');
+                        $('#kpi-top-sku-rev-qty').text('0 units');
+                    }
+                    
+                    // Totals
+                    $('#kpi-total-units').text(summary.total_units_sold || 0);
+                    $('#kpi-total-revenue').text(formatRupees(summary.total_revenue || 0));
+                    
+                    // Render Visual Charts
+                    renderTopSkusChart(skus, activeTopMetric);
+                    renderCategoryShareChart(data.category_share || {});
+                    
+                    // Populate Rankings Table
+                    const rows = $('#sku-analytics-rows');
+                    rows.empty();
+                    
+                    if (skus.length === 0) {
+                        rows.append('<tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-cubes text-secondary me-2"></i> No SKU data found for the selected month/brand.</td></tr>');
+                        return;
+                    }
+                    
+                    skus.forEach((item, index) => {
+                        const unitsSold = parseInt(item.total_quantity_sold) || 0;
+                        const revenue = parseFloat(item.total_revenue) || 0;
+                        const currentStock = parseInt(item.current_stock) || 0;
+                        const minStock = parseInt(item.minimum_stock) || 0;
+                        
+                        // Stock health badge
+                        let stockBadge = '<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">In Stock (' + currentStock + ')</span>';
+                        if (currentStock <= 0) {
+                            stockBadge = '<span class="badge bg-danger">Out of Stock (0)</span>';
+                        } else if (currentStock <= minStock) {
+                            stockBadge = `<span class="badge bg-warning text-dark">Low Stock (${currentStock})</span>`;
+                        }
+                        
+                        // Units Sold Badge
+                        const unitsBadge = unitsSold > 0 
+                            ? `<span class="badge bg-primary fs-6 px-2 py-1">${unitsSold}</span>` 
+                            : '<span class="badge bg-secondary bg-opacity-25 text-white-50">0</span>';
+                            
+                        // Revenue Styling
+                        const revHtml = revenue > 0 
+                            ? `<strong class="text-success">${formatRupees(revenue)}</strong>` 
+                            : '<span class="text-muted">₹0.00</span>';
+                            
+                        // Profit HTML (Owner Only)
+                        let profitHtml = '';
+                        if (isOwner) {
+                            const profit = parseFloat(item.estimated_profit) || 0;
+                            const margin = parseFloat(item.profit_margin) || 0;
+                            const profitColor = profit > 0 ? 'text-success fw-bold' : (profit < 0 ? 'text-danger fw-bold' : 'text-muted');
+                            const marginBadge = margin > 0 
+                                ? `<span class="badge bg-success bg-opacity-25 text-success">${margin}%</span>` 
+                                : '<span class="badge bg-secondary bg-opacity-25 text-white-50">0%</span>';
+                            profitHtml = `
+                                <td class="text-end ${profitColor}">${formatRupees(profit)}</td>
+                                <td class="text-center">${marginBadge}</td>
+                            `;
+                        }
+                        
+                        // Invoices count
+                        const invoicesBadge = item.invoices_count > 0 
+                            ? `<span class="badge bg-info text-dark fw-bold px-2 py-1">${item.invoices_count} Bills</span>` 
+                            : '<span class="text-muted small">-</span>';
+                            
+                        rows.append(`
+                            <tr>
+                                <td class="text-center fw-bold text-secondary">${index + 1}</td>
+                                <td>
+                                    <div class="fw-bold text-white">${item.sku_name}</div>
+                                    <div class="small text-secondary font-monospace mt-1">
+                                        <code>${item.sku_code}</code> 
+                                        ${item.unit ? `&bull; ${item.unit}` : ''}
+                                        ${item.weight ? `&bull; ${item.weight}` : ''}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary bg-opacity-50 text-white">${item.brand_name}</span>
+                                    <div class="small text-secondary mt-1">${item.product_name}</div>
+                                </td>
+                                <td class="text-end">${unitsBadge}</td>
+                                <td class="text-end">${revHtml}</td>
+                                <td class="text-end">
+                                    <div class="small text-white fw-bold">${formatRupees(item.selling_price)}</div>
+                                    <div class="small text-muted font-monospace">MRP: ${formatRupees(item.mrp)}</div>
+                                </td>
+                                ${profitHtml}
+                                <td class="text-center">${stockBadge}</td>
+                                <td class="text-center">${invoicesBadge}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-info btn-view-sku-history" 
+                                        data-id="${item.sku_id}" 
+                                        data-name="${item.sku_name}" 
+                                        data-code="${item.sku_code}" 
+                                        data-sp="${item.selling_price}" 
+                                        data-mrp="${item.mrp}" 
+                                        data-stock="${item.current_stock}" 
+                                        title="View 12-Month Sales History">
+                                        <i class="fas fa-chart-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                    
+                    datatables['sku_analytics'] = $('#sku-analytics-table').DataTable({
+                        order: [[3, 'desc']], // Default sort by Units Sold descending
+                        pageLength: 25,
+                        ordering: true,
+                        destroy: true,
+                        stateSave: true,
+                        dom: 'Bfrtip',
+                        buttons: [
+                            { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                            { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                            { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Table', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                        ]
+                    });
+                }
+            })
+            .fail(function () {
+                showToast('error', 'Failed to load SKU analytics.');
+            });
+    }
+
+    // Toggle chart metric (Units vs Revenue)
+    $(document).on('click', '.btn-chart-metric', function () {
+        $('.btn-chart-metric').removeClass('active');
+        $(this).addClass('active');
+        activeTopMetric = $(this).data('metric');
+        if (window.currentSkuAnalyticsData && window.currentSkuAnalyticsData.skus) {
+            renderTopSkusChart(window.currentSkuAnalyticsData.skus, activeTopMetric);
+        }
+    });
+
+    // Filter changes for SKU Analytics
+    $(document).on('change', '#analytics-month-select, #analytics-year-select, #analytics-brand-select', function () {
+        if ($('#sku-analytics-table').length > 0) {
+            loadSkuAnalytics();
+        }
+    });
+
+    $(document).on('click', '#btn-refresh-sku-analytics', function () {
+        loadSkuAnalytics();
+        showToast('info', 'SKU analytics refreshed.');
+    });
+
+    // Open SKU Deep-Dive Sales History Drawer
+    $(document).on('click', '.btn-view-sku-history', function () {
+        const skuId = $(this).data('id');
+        const skuName = $(this).data('name');
+        const skuCode = $(this).data('code');
+        const sellingPrice = parseFloat($(this).data('sp')) || 0;
+        const mrp = parseFloat($(this).data('mrp')) || 0;
+        const stock = $(this).data('stock');
+        const year = $('#analytics-year-select').val() || new Date().getFullYear();
+        
+        const drawerEl = document.getElementById('skuHistoryDrawer');
+        if (!drawerEl) return;
+        
+        const myDrawer = new bootstrap.Offcanvas(drawerEl);
+        myDrawer.show();
+        
+        $('#sku-drawer-title').html(`<i class="fas fa-barcode text-primary me-2"></i> ${skuName}`);
+        $('#sku-drawer-subtitle').text(`Code: ${skuCode} | Sales History for Year ${year}`);
+        $('#sku-drawer-sp').text(formatRupees(sellingPrice));
+        $('#sku-drawer-mrp').text(formatRupees(mrp));
+        $('#sku-drawer-stock').text(`${stock} Units`);
+        $('#sku-drawer-year').text(year);
+        
+        const recentTbody = $('#sku-drawer-recent-sales-body');
+        recentTbody.html('<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
+        
+        $.get(`api/skus.php?action=sku_sales_history&sku_id=${skuId}&year=${year}`, function (res) {
+            if (res.status === 'success') {
+                const data = res.data;
+                const monthlyBreakdown = data.monthly_breakdown || [];
+                const recentSales = data.recent_sales || [];
+                
+                // Render 12-month bar chart
+                renderSkuMonthlyTrendChart(monthlyBreakdown);
+                
+                // Populate Recent Retailer Sales Table
+                recentTbody.empty();
+                if (recentSales.length > 0) {
+                    recentSales.forEach(sale => {
+                        recentTbody.append(`
+                            <tr>
+                                <td><code>${sale.invoice_number}</code></td>
+                                <td class="small text-secondary">${formatDate(sale.invoice_date)}</td>
+                                <td><strong class="text-white">${sale.retailer_shop}</strong><br><span class="small text-secondary">${sale.retailer_area || ''}</span></td>
+                                <td class="text-end fw-bold text-info">${sale.quantity}</td>
+                                <td class="text-end small">${formatRupees(sale.selling_price)}</td>
+                                <td class="text-end fw-bold text-success">${formatRupees(sale.total_amount)}</td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    recentTbody.append('<tr><td colspan="6" class="text-center py-3 text-muted">No sales invoices found for this SKU.</td></tr>');
+                }
+            } else {
+                showToast('error', res.message || 'Could not load SKU history.');
+            }
+        });
     });
 
     // ----------------------------------------------------
@@ -1222,10 +1690,10 @@ $(document).ready(function () {
     function loadPurchaseEntry() {
         loadSuppliersList();
         loadPurchaseHistoryList();
-        populateDropdown('api/brands.php?action=list', '#filter-category', '-- Choose Category --', 'id', 'name');
         populateDropdown('api/skus.php?action=list', '.purchase-sku-select', '-- Select Item SKU --', 'id', 'sku_name');
         
-        // Reset quick filters
+        // Reset quick filters - categories depend on selected supplier
+        $('#filter-category').empty().append('<option value="">-- Choose Supplier First --</option>').prop('disabled', true);
         $('#filter-product').empty().append('<option value="">-- Choose Category First --</option>').prop('disabled', true);
         $('#filter-sku').empty().append('<option value="">-- Choose Product First --</option>').prop('disabled', true);
         $('#filter-qty').val(1);
@@ -1247,7 +1715,7 @@ $(document).ready(function () {
                         
                         tbody.append(`
                             <tr>
-                                <td>${formatDate(pur.purchase_date)}</td>
+                                <td data-order="${pur.purchase_date}">${formatDate(pur.purchase_date)}</td>
                                 <td><span class="badge bg-secondary px-2">${pur.supplier_invoice}</span></td>
                                 <td><strong>${pur.supplier_name}</strong></td>
                                 <td class="text-end font-monospace">${formatRupees(sub)}</td>
@@ -1266,11 +1734,9 @@ $(document).ready(function () {
                     
                     if (res.data.length > 0) {
                         datatables['purchase-history'] = $('#purchase-history-table').DataTable({
-                            order: [],
-                        pageLength: 10,
+                            pageLength: 10,
                             ordering: true,
                             destroy: true,
-                            stateSave: true,
                             order: [[0, 'desc']] // sort by date descending
                         });
                     }
@@ -1351,7 +1817,7 @@ $(document).ready(function () {
         firstRow.find('select').val('').trigger('change');
         
         // Reset quick filters
-        $('#filter-category').val('').trigger('change');
+        $('#pur-supplier-id').val('').trigger('change');
         $('#filter-qty').val(1);
     });
 
@@ -1371,7 +1837,7 @@ $(document).ready(function () {
                             if (res.status === 'success') {
                                 const pur = res.data;
                                 $('#purchase-id').val(pur.id);
-                                $('#pur-supplier-id').val(pur.supplier_name);
+                                $('#pur-supplier-id').val(pur.supplier_name).trigger('change');
                                 $('#pur-invoice').val(pur.supplier_invoice);
                                 $('#pur-date').val(pur.purchase_date);
                                 $('#pur-remarks').val(pur.remarks);
@@ -1457,6 +1923,8 @@ $(document).ready(function () {
                         select.empty().append('<option value="">-- Select Supplier --</option>');
                     }
                     
+                    window.suppliersData = res.data;
+
                     res.data.forEach(function (sup) {
                         // Table row
                         if (tbody.length) {
@@ -1476,7 +1944,7 @@ $(document).ready(function () {
                         
                         // Select option
                         if (select.length) {
-                            select.append(`<option value="${sup.name}">${sup.name}</option>`);
+                            select.append(`<option value="${sup.name}" data-id="${sup.id}">${sup.name}</option>`);
                         }
                     });
 
@@ -1560,6 +2028,46 @@ $(document).ready(function () {
     // Quick selection dependent dropdowns
     let allProducts = [];
     let allSkus = [];
+
+    // Supplier changed -> Filter Category dropdown in Purchase Entry
+    $(document).on('change', '#pur-supplier-id', function () {
+        const supplierName = $(this).val();
+        const catSelect = $('#filter-category');
+        const prodSelect = $('#filter-product');
+        const skuSelect = $('#filter-sku');
+        
+        catSelect.empty().append('<option value="">-- Choose Category --</option>').prop('disabled', true);
+        prodSelect.empty().append('<option value="">-- Choose Category First --</option>').prop('disabled', true);
+        skuSelect.empty().append('<option value="">-- Choose Product First --</option>').prop('disabled', true);
+        
+        if (!supplierName) {
+            catSelect.html('<option value="">-- Choose Supplier First --</option>').prop('disabled', true);
+            return;
+        }
+        
+        // Find supplier ID
+        let supplierId = $(this).find('option:selected').data('id');
+        if (!supplierId && window.suppliersData) {
+            const found = window.suppliersData.find(s => s.name === supplierName);
+            if (found) supplierId = found.id;
+        }
+        
+        const url = supplierId ? `api/brands.php?action=list&supplier_id=${supplierId}` : 'api/brands.php?action=list';
+        
+        $.get(url, function (res) {
+            if (res.status === 'success') {
+                catSelect.empty().append('<option value="">-- Choose Category --</option>');
+                if (res.data && res.data.length > 0) {
+                    res.data.forEach(function (cat) {
+                        catSelect.append(`<option value="${cat.id}">${cat.name}</option>`);
+                    });
+                    catSelect.prop('disabled', false);
+                } else {
+                    catSelect.append('<option value="">No categories linked to this supplier</option>');
+                }
+            }
+        });
+    });
 
     $(document).on('change', '#filter-category', function () {
         const catId = $(this).val();
@@ -1667,9 +2175,15 @@ $(document).ready(function () {
                             outColor = 'text-danger fw-bold';
                         }
                         
+                        let isSpecial = parseInt(item.is_special) === 1;
+                        let specialStarIcon = isSpecial ? ' <i class="fas fa-star text-warning" title="Special Retailer (Dynamic Pricing Enabled)"></i>' : '';
+                        let starBtn = isSpecial
+                            ? `<button class="btn btn-sm btn-warning btn-toggle-special" data-id="${item.id}" title="Special Retailer (Dynamic Pricing Enabled) - Click to unstar"><i class="fas fa-star text-dark"></i></button>`
+                            : `<button class="btn btn-sm btn-outline-secondary btn-toggle-special" data-id="${item.id}" title="Mark as Special Retailer (Enable Dynamic SKU Pricing)"><i class="far fa-star"></i></button>`;
+
                         rows.append(`
                             <tr>
-                                <td><strong>${item.shop_name}</strong><br><span class="small text-secondary">${item.business_type}</span></td>
+                                <td><strong>${item.shop_name}</strong>${specialStarIcon}<br><span class="small text-secondary">${item.business_type}</span></td>
                                 <td><strong>${item.name}</strong><br><span class="small text-secondary">${item.area}, ${item.city}</span></td>
                                 <td>${item.mobile}</td>
                                 <td><code>${item.gst_number || 'URP'}</code></td>
@@ -1682,8 +2196,11 @@ $(document).ready(function () {
                                 <td><span class="small">${item.visit_frequency}</span></td>
                                 <td>${badge}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-warning edit-retailer-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger delete-retailer-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                                    <div class="btn-group btn-group-sm">
+                                        ${isOwner ? starBtn : ''}
+                                        <button class="btn btn-sm btn-outline-warning edit-retailer-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger delete-retailer-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </div>
                                 </td>
                             </tr>
                         `);
@@ -1706,6 +2223,27 @@ $(document).ready(function () {
         populateDropdown('api/beatroute.php?action=my_routes', '#edit-ret-beat-route', '-- Choose Beat Route --', 'id', 'route_name');
         populateDropdown('api/beatroute.php?action=my_routes', '#manage-routes-route-select', '-- No Route --', 'id', 'route_name');
     }
+
+    $(document).on('click', '.btn-toggle-special', function () {
+        const id = $(this).data('id');
+        const $btn = $(this);
+        $btn.prop('disabled', true);
+        $.post('api/retailers.php?action=toggle_special', { id: id })
+            .done(function (res) {
+                if (res.status === 'success') {
+                    showToast('success', res.message);
+                    loadRetailers();
+                } else {
+                    showToast('error', res.message);
+                }
+            })
+            .fail(function () {
+                showToast('error', 'Failed to update special retailer status.');
+            })
+            .always(function () {
+                $btn.prop('disabled', false);
+            });
+    });
 
     $(document).on('submit', '#add-retailer-form', function (e) {
         e.preventDefault();
@@ -1738,6 +2276,7 @@ $(document).ready(function () {
                 $('#edit-ret-email').val(r.email);
                 $('#edit-ret-area').val(r.area);
                 $('#edit-ret-city').val(r.city);
+                $('#edit-ret-state').val(r.state || 'Karnataka');
                 $('#edit-ret-pin').val(r.pin_code);
                 $('#edit-ret-gmap').val(r.google_map_link);
                 $('#edit-ret-address').val(r.address);
@@ -1745,6 +2284,7 @@ $(document).ready(function () {
                 $('#edit-ret-staff').val(r.assigned_staff_id);
                 $('#edit-ret-beat-route').val(r.route_id || '');
                 $('#edit-ret-status').val(r.status);
+                $('#edit-ret-is-special').prop('checked', parseInt(r.is_special) === 1);
                 $('#edit-ret-remarks').val(r.remarks);
                 
                 $('#editRetailerModal').modal('show');
@@ -1930,6 +2470,452 @@ $(document).ready(function () {
                 container.html(html);
             }
         });
+    });
+
+    // ----------------------------------------------------
+    // RETAILERS OUTSTANDING LOGS CONTROLLER
+    // ----------------------------------------------------
+    function loadRetailersOutstanding() {
+        safeDestroyTable('#retailers-outstanding-table');
+        
+        // Populate Routes filter dropdown if not yet populated
+        if ($('#filter-out-route option').length <= 1) {
+            populateDropdown('api/beatroute.php?action=my_routes', '#filter-out-route', '-- All Beat Routes --', 'id', 'route_name');
+        }
+        
+        // Also populate collect modal routes if form exists
+        if ($('#collect-payment-form').length > 0) {
+            populateDropdown('api/beatroute.php?action=my_routes', '#pay-route', '-- All Beat Routes --', 'id', 'route_name');
+            populateDropdown('api/retailers.php?action=list', '#pay-retailer', '-- Select Retailer --', 'id', 'shop_name');
+            
+            fetchConfigLists(function() {
+                const payMethodSelect = $('#pay-method');
+                if (payMethodSelect.length) {
+                    payMethodSelect.empty();
+                    window.paymentMethods.forEach(method => {
+                        payMethodSelect.append(`<option value="${method}">${method}</option>`);
+                    });
+                }
+            });
+        }
+        
+        const routeId = $('#filter-out-route').val() || '';
+        const filterVal = $('#filter-out-category').val() || 'all';
+        
+        $.get(`api/retailers.php?action=outstanding_logs&route_id=${routeId}&filter=${filterVal}`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const data = res.data;
+                    const retailers = data.retailers || [];
+                    const summary = data.summary || {};
+                    
+                    // Update KPI summary cards
+                    $('#kpi-total-outstanding').text(formatRupees(summary.total_outstanding || 0));
+                    $('#kpi-total-count').text(summary.total_count || 0);
+                    $('#kpi-overdue-count').text(summary.overdue_count || 0);
+                    $('#kpi-avg-outstanding').text(formatRupees(summary.avg_outstanding || 0));
+                    
+                    const rows = $('#retailers-outstanding-rows');
+                    rows.empty();
+                    
+                    if (retailers.length === 0) {
+                        rows.append('<tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-check-circle text-success me-2"></i> No outstanding dues found matching the selected filter.</td></tr>');
+                        return;
+                    }
+                    
+                    retailers.forEach((item, index) => {
+                        const outAmt = parseFloat(item.outstanding_amount) || 0;
+                        const credLimit = parseFloat(item.credit_limit) || 0;
+                        const isOverdue = credLimit > 0 && outAmt > credLimit;
+                        
+                        // Outstanding amount styling & badge
+                        let outColorClass = 'text-warning fw-bold';
+                        let riskBadge = '<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">Safe</span>';
+                        let healthPercent = credLimit > 0 ? Math.min(Math.round((outAmt / credLimit) * 100), 100) : 100;
+                        let progressColor = 'bg-success';
+                        
+                        if (isOverdue) {
+                            outColorClass = 'text-danger fw-bold';
+                            riskBadge = `<span class="badge bg-danger text-white"><i class="fas fa-exclamation-triangle me-1"></i> Overdue (+${formatRupees(outAmt - credLimit)})</span>`;
+                            progressColor = 'bg-danger';
+                        } else if (outAmt >= (credLimit * 0.75)) {
+                            outColorClass = 'text-warning fw-bold';
+                            riskBadge = '<span class="badge bg-warning text-dark">High (75%+)</span>';
+                            progressColor = 'bg-warning';
+                        }
+                        
+                        // Clean phone for WhatsApp & Calling
+                        const cleanPhone = (item.mobile || '').replace(/[^0-9]/g, '');
+                        const waMsg = `Hello ${item.owner_name || item.name} (${item.shop_name}), this is a payment update from Navatara Enterprises. Your current pending outstanding balance is ${formatRupees(outAmt)}. Kindly arrange for settlement at your earliest convenience. Thank you!`;
+                        const waLink = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMsg)}`;
+                        
+                        // GST / URP badge
+                        const gstBadge = item.gst_number ? `<span class="badge bg-dark border border-secondary text-info">${item.gst_number}</span>` : '<span class="badge bg-secondary bg-opacity-25 text-white-50">URP</span>';
+                        
+                        // Map Pin
+                        const mapBtn = item.google_map_link ? `<a href="${item.google_map_link}" target="_blank" class="text-info ms-1" title="Open in Maps"><i class="fas fa-map-marker-alt"></i></a>` : '';
+                        
+                        // Last Payment Display
+                        let lastPayDisplay = '<span class="text-secondary small">No payment logs</span>';
+                        if (item.last_payment_date) {
+                            lastPayDisplay = `<div class="small fw-bold text-success">${formatRupees(item.last_payment_amount || 0)}</div><div class="small text-secondary">${formatDate(item.last_payment_date)} (${item.last_payment_method || 'Cash'})</div>`;
+                        }
+                        
+                        // Last Invoice Display
+                        let lastInvDisplay = '<span class="text-secondary small">No invoice</span>';
+                        if (item.last_invoice_date) {
+                            let unpaidTag = item.unpaid_invoices_count > 0 ? `<span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 small ms-1">${item.unpaid_invoices_count} Unpaid</span>` : '<span class="badge bg-success bg-opacity-25 text-success small ms-1">Paid</span>';
+                            lastInvDisplay = `<div class="small fw-bold text-white"><code>${item.last_invoice_number || 'INV'}</code> ${unpaidTag}</div><div class="small text-secondary">${formatDate(item.last_invoice_date)} - ${formatRupees(item.last_invoice_amount || 0)}</div>`;
+                        }
+                        
+                        rows.append(`
+                            <tr>
+                                <td class="text-center fw-bold text-secondary">${index + 1}</td>
+                                <td>
+                                    <div class="fw-bold text-white">${item.shop_name}</div>
+                                    <div class="small text-secondary d-flex align-items-center gap-1 mt-1">
+                                        <span class="badge bg-secondary bg-opacity-50">${item.business_type || 'Retail Shop'}</span>
+                                        ${gstBadge}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-white">${item.owner_name || item.name}</div>
+                                    <div class="small text-secondary d-flex align-items-center gap-2 mt-1">
+                                        <a href="tel:${item.mobile}" class="text-info text-decoration-none" title="Call"><i class="fas fa-phone-alt me-1"></i>${item.mobile}</a>
+                                        <a href="${waLink}" target="_blank" class="text-success text-decoration-none" title="WhatsApp Message"><i class="fab fa-whatsapp"></i></a>
+                                    </div>
+                                    ${item.alternate_mobile ? `<div class="small text-muted">Alt: ${item.alternate_mobile}</div>` : ''}
+                                </td>
+                                <td>
+                                    <div class="small text-white">${item.area || 'N/A'}, ${item.city || ''} ${mapBtn}</div>
+                                    <div class="small text-secondary font-monospace">${item.pin_code || ''}</div>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold text-info">${item.route_name || 'Unassigned Route'}</div>
+                                    <div class="small text-white-50"><i class="fas fa-user-tag me-1 text-secondary"></i>${item.staff_names || 'No Staff Assigned'}</div>
+                                </td>
+                                <td class="text-end text-secondary">
+                                    <span class="small font-monospace">${formatRupees(credLimit)}</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="${outColorClass} fs-6">${formatRupees(outAmt)}</div>
+                                    ${item.opening_balance > 0 ? `<div class="small text-muted" style="font-size: 11px;">(Op. Bal: ${formatRupees(item.opening_balance)})</div>` : ''}
+                                </td>
+                                <td class="text-center">
+                                    <div class="mb-1">${riskBadge}</div>
+                                    <div class="progress bg-secondary bg-opacity-25" style="height: 6px; width: 85px; margin: 0 auto;">
+                                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${healthPercent}%" aria-valuenow="${healthPercent}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </td>
+                                <td>${lastPayDisplay}</td>
+                                <td>${lastInvDisplay}</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-action primary btn-quick-collect-outstanding" 
+                                            data-id="${item.id}" 
+                                            data-name="${item.shop_name}" 
+                                            data-route="${item.route_id || ''}" 
+                                            data-outstanding="${outAmt}" 
+                                            title="Collect Payment">
+                                            <i class="fas fa-hand-holding-usd"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-view-outstanding-details" 
+                                            data-id="${item.id}" 
+                                            title="View Bills &amp; Ledger">
+                                            <i class="fas fa-file-invoice"></i>
+                                        </button>
+                                        <a href="${waLink}" target="_blank" class="btn btn-outline-success" title="Send WhatsApp Reminder">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                    
+                    datatables['retailers_outstanding'] = $('#retailers-outstanding-table').DataTable({
+                        order: [[6, 'desc']], // Default sort by Outstanding column descending
+                        pageLength: 25,
+                        ordering: true,
+                        destroy: true,
+                        stateSave: true,
+                        dom: 'Bfrtip',
+                        buttons: [
+                            { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                            { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                            { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Table', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                        ]
+                    });
+                }
+            })
+            .fail(function () {
+                showToast('error', 'Failed to load outstanding logs.');
+            });
+    }
+
+    // Filter changes for Outstanding Logs
+    $(document).on('change', '#filter-out-route, #filter-out-category', function () {
+        if ($('#retailers-outstanding-table').length > 0) {
+            loadRetailersOutstanding();
+        }
+    });
+
+    $(document).on('click', '#btn-refresh-outstanding', function () {
+        loadRetailersOutstanding();
+        showToast('info', 'Outstanding logs refreshed.');
+    });
+
+    // Quick Collect Payment from Outstanding Logs table
+    $(document).on('click', '.btn-quick-collect-outstanding', function () {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        const routeId = $(this).data('route');
+        const outAmt = parseFloat($(this).data('outstanding')) || 0;
+        
+        $('#collectPaymentModal').modal('show');
+        
+        if (routeId) {
+            $('#pay-route').val(routeId);
+        }
+        
+        // Ensure retailer dropdown is enabled and set
+        $('#pay-retailer').prop('disabled', false);
+        populateDropdown(`api/retailers.php?action=list${routeId ? '&route_id=' + routeId : ''}`, '#pay-retailer', '-- Select Retailer --', 'id', 'shop_name').then(() => {
+            $('#pay-retailer').val(id).trigger('change');
+        });
+        
+        $('#pay-outstanding-val').text(formatRupees(outAmt));
+        $('#pay-amount').val(outAmt > 0 ? outAmt.toFixed(2) : '');
+    });
+
+    // View Outstanding Details Drawer (Unpaid Invoices & Recent Payments)
+    $(document).on('click', '.btn-view-outstanding-details', function () {
+        const id = $(this).data('id');
+        const drawerEl = document.getElementById('outstandingDetailsDrawer');
+        if (!drawerEl) return;
+        
+        const myDrawer = new bootstrap.Offcanvas(drawerEl);
+        myDrawer.show();
+        
+        $('#drawer-shop-name').html('<div class="spinner-border spinner-border-sm text-primary"></div> Loading profile...');
+        $('#drawer-invoices-body').html('<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
+        $('#drawer-payments-body').html('<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
+        
+        $.get(`api/retailers.php?action=outstanding_detail&id=${id}`, function (res) {
+            if (res.status === 'success') {
+                const ret = res.data;
+                const outAmt = parseFloat(ret.outstanding_amount) || 0;
+                const credLimit = parseFloat(ret.credit_limit) || 0;
+                
+                $('#drawer-shop-name').html(`<i class="fas fa-store text-primary me-2"></i> ${ret.shop_name}`);
+                $('#drawer-owner-info').text(`${ret.owner_name || ret.name} | ${ret.mobile} | ${ret.area}, ${ret.city}`);
+                $('#drawer-outstanding-val').text(formatRupees(outAmt));
+                $('#drawer-credit-limit-val').text(formatRupees(credLimit));
+                $('#drawer-route-val').text(ret.route_name || 'No Route Assigned');
+                $('#drawer-status-badge').html(ret.status === 'Active' ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>');
+                
+                // Set drawer action buttons
+                const cleanPhone = (ret.mobile || '').replace(/[^0-9]/g, '');
+                const waMsg = `Hello ${ret.owner_name || ret.name} (${ret.shop_name}), payment reminder from Navatara Enterprises: Pending dues amount to ${formatRupees(outAmt)}. Please clear at earliest. Thank you!`;
+                $('#drawer-btn-whatsapp').attr('href', `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMsg)}`);
+                $('#drawer-btn-call').attr('href', `tel:${ret.mobile}`);
+                
+                $('#drawer-btn-quick-collect').off('click').on('click', function () {
+                    myDrawer.hide();
+                    setTimeout(() => {
+                        $(`.btn-quick-collect-outstanding[data-id="${ret.id}"]`).first().trigger('click');
+                    }, 300);
+                });
+                
+                // Populate Invoices Tab
+                const invBody = $('#drawer-invoices-body');
+                invBody.empty();
+                if (ret.invoices && ret.invoices.length > 0) {
+                    ret.invoices.forEach(inv => {
+                        const invPending = parseFloat(inv.outstanding_amount) || 0;
+                        let agingBadge = '<span class="badge bg-success">0-15d</span>';
+                        const days = parseInt(inv.days_old) || 0;
+                        if (days > 45) {
+                            agingBadge = `<span class="badge bg-danger">${days}d Old</span>`;
+                        } else if (days > 15) {
+                            agingBadge = `<span class="badge bg-warning text-dark">${days}d Old</span>`;
+                        }
+                        
+                        let statusBadge = inv.payment_status === 'Paid' ? '<span class="badge bg-success">Paid</span>' : (inv.payment_status === 'Partially Paid' ? '<span class="badge bg-warning text-dark">Partial</span>' : '<span class="badge bg-danger">Unpaid</span>');
+                        
+                        invBody.append(`
+                            <tr>
+                                <td><code>${inv.invoice_number}</code></td>
+                                <td class="small text-secondary">${formatDate(inv.invoice_date)}</td>
+                                <td class="text-end small">${formatRupees(inv.grand_total)}</td>
+                                <td class="text-end fw-bold ${invPending > 0 ? 'text-warning' : 'text-success'}">${formatRupees(invPending)}</td>
+                                <td class="text-center">${statusBadge} ${invPending > 0 ? agingBadge : ''}</td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    invBody.append('<tr><td colspan="5" class="text-center py-3 text-muted">No invoices found for this retailer.</td></tr>');
+                }
+                
+                // Populate Payments Tab
+                const payBody = $('#drawer-payments-body');
+                payBody.empty();
+                if (ret.payments && ret.payments.length > 0) {
+                    ret.payments.forEach(p => {
+                        payBody.append(`
+                            <tr>
+                                <td><code>#REC-${p.id}</code></td>
+                                <td class="small text-secondary">${formatDate(p.payment_date)}</td>
+                                <td><span class="badge bg-secondary">${p.payment_method}</span></td>
+                                <td class="text-end fw-bold text-success">${formatRupees(p.amount)}</td>
+                                <td class="small text-white-50">${p.collector_name || 'Owner'}</td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    payBody.append('<tr><td colspan="5" class="text-center py-3 text-muted">No payment records found.</td></tr>');
+                }
+            } else {
+                showToast('error', res.message || 'Could not load retailer details.');
+            }
+        });
+    });
+
+    // ----------------------------------------------------
+    // TOP PURCHASING RETAILERS CONTROLLER
+    // ----------------------------------------------------
+    function loadTopRetailers() {
+        safeDestroyTable('#top-retailers-table');
+        
+        const periodVal = $('#filter-top-period').val() || 'all';
+        const routeId = $('#filter-top-route').val() || '';
+        const sortVal = $('#filter-top-sort').val() || 'purchase_desc';
+        
+        // Populate Route filter if empty
+        if ($('#filter-top-route option').length <= 1) {
+            populateDropdown('api/beatroute.php?action=my_routes', '#filter-top-route', '-- All Beat Routes --', 'id', 'route_name');
+        }
+        
+        $.get(`api/retailers.php?action=top_purchasers&period=${periodVal}&route_id=${routeId}&sort_by=${sortVal}`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const retailers = res.data.retailers || [];
+                    const summary = res.data.summary || {};
+                    
+                    // Update KPI Summary Cards (3 Cards)
+                    $('#kpi-top-total-purchases').text(formatRupees(summary.total_purchases || 0));
+                    $('#kpi-active-buyers-count').text(`${summary.active_buyers_count || 0} Buying Accounts`);
+                    $('#kpi-top-total-orders').text(summary.total_orders || 0);
+                    $('#kpi-top-total-units').text(summary.total_units ? Number(summary.total_units).toLocaleString('en-IN') : '0');
+                    
+                    // Render Table Rows
+                    const rows = $('#top-retailers-rows');
+                    rows.empty();
+                    
+                    retailers.forEach((item, index) => {
+                        const rankNum = index + 1;
+                        let rankBadge = `<span class="badge bg-dark text-secondary border border-secondary">${rankNum}</span>`;
+                        if (rankNum === 1) rankBadge = `<span class="badge bg-warning text-dark fw-bold shadow-sm"><i class="fas fa-trophy me-1"></i> #1</span>`;
+                        else if (rankNum === 2) rankBadge = `<span class="badge bg-secondary text-white fw-bold shadow-sm"><i class="fas fa-medal me-1"></i> #2</span>`;
+                        else if (rankNum === 3) rankBadge = `<span class="badge bg-danger text-white fw-bold shadow-sm"><i class="fas fa-award me-1"></i> #3</span>`;
+                        
+                        const isSpecial = parseInt(item.is_special) === 1;
+                        const specialStar = isSpecial ? ' <i class="fas fa-star text-warning" title="Special Retailer (Dynamic Pricing)"></i>' : '';
+                        
+                        const totalPurchased = parseFloat(item.total_purchased) || 0;
+                        const totalUnits = parseInt(item.total_units_bought) || 0;
+                        const orderFreq = parseInt(item.order_frequency) || 0;
+                        const avgOrder = parseFloat(item.avg_order_value) || 0;
+                        
+                        const lastPurchDisplay = item.last_purchase_date 
+                            ? `<span class="text-white">${formatDate(item.last_purchase_date)}</span>` 
+                            : '<span class="text-secondary">No Orders Yet</span>';
+                        
+                        const orderBtn = `
+                            <button class="btn btn-sm btn-outline-warning btn-quick-order-from-top" 
+                                data-id="${item.id}" 
+                                data-name="${item.shop_name}" 
+                                data-route="${item.route_id || ''}" 
+                                title="Place New Order">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
+                        `;
+                        
+                        rows.append(`
+                            <tr>
+                                <td class="text-center">${rankBadge}</td>
+                                <td>
+                                    <strong>${item.shop_name}</strong>${specialStar}
+                                    <br><span class="small text-secondary">${item.owner_name} &bull; ${item.mobile} (${item.area || item.city})</span>
+                                </td>
+                                <td>
+                                    <span class="small text-white d-block fw-bold">${item.route_name || 'No Route'}</span>
+                                    <span class="small text-white-50">${item.staff_names || 'No Staff Assigned'}</span>
+                                </td>
+                                <td class="text-end fw-bold fs-6 ${totalPurchased > 0 ? 'text-warning' : 'text-secondary'}">
+                                    ${formatRupees(totalPurchased)}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark fw-bold px-2 py-1">${orderFreq} ${orderFreq === 1 ? 'Order' : 'Orders'}</span>
+                                </td>
+                                <td class="text-end fw-bold text-white">
+                                    ${totalUnits.toLocaleString('en-IN')} pcs
+                                </td>
+                                <td class="text-end text-info">
+                                    ${formatRupees(avgOrder)}
+                                </td>
+                                <td class="text-center">
+                                    ${item.tier_badge || '<span class="badge bg-secondary">Standard</span>'}
+                                </td>
+                                <td>${lastPurchDisplay}</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        ${orderBtn}
+                                        <button class="btn btn-sm btn-outline-info btn-view-outstanding-details" data-id="${item.id}" title="View Ledger &amp; Invoices">
+                                            <i class="fas fa-file-invoice"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                    
+                    datatables['top_retailers'] = $('#top-retailers-table').DataTable({
+                        order: [],
+                        pageLength: 25,
+                        ordering: true,
+                        destroy: true,
+                        stateSave: true,
+                        dom: 'Bfrtip',
+                        buttons: [
+                            { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                            { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                            { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Leaderboard', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                        ]
+                    });
+                }
+            })
+            .fail(function () {
+                showToast('error', 'Failed to load top purchasing retailers.');
+            });
+    }
+
+    // Filter changes for Top Purchasing Retailers
+    $(document).on('change', '#filter-top-period, #filter-top-route, #filter-top-sort', function () {
+        if ($('#top-retailers-table').length > 0) {
+            loadTopRetailers();
+        }
+    });
+
+    // Quick Order action from Top Retailers table
+    $(document).on('click', '.btn-quick-order-from-top', function () {
+        const id = $(this).data('id');
+        const routeId = $(this).data('route');
+        
+        window.pendingOrderRetailerId = id;
+        window.pendingOrderRouteId = routeId;
+        window.orderModeContext = routeId ? 'By Route' : 'By Call';
+        window.location.hash = '#place_order';
     });
 
     // ----------------------------------------------------
@@ -2257,7 +3243,53 @@ $(document).ready(function () {
                     });
                 }
             });
+
+        // Load Sales Orders Summary Stats
+        $.get('api/orders.php?action=stats', function (res) {
+            if (res.status === 'success' && res.data) {
+                $('#card-orders-daily-sales').text(formatRupees(res.data.daily_sales || 0));
+                $('#card-orders-monthly-sales').text(formatRupees(res.data.monthly_sales || 0));
+                $('#card-orders-overall-sales').text(formatRupees(res.data.overall_sales || 0));
+                $('#card-orders-pending-count').text(res.data.pending_orders || 0);
+            }
+        });
     }
+
+    function filterOrdersByStatus(status) {
+        if (!datatables['orders']) return;
+        
+        if (!status || status === 'all') {
+            datatables['orders'].column(7).search('').draw();
+            $('#filter-order-status').val('all');
+            $('#card-orders-pending-filter').removeClass('border border-warning shadow-lg').css('background', '');
+            $('#card-orders-pending-subtext').html('<i class="fas fa-filter me-1"></i>Click to show pending');
+        } else {
+            datatables['orders'].column(7).search(status).draw();
+            $('#filter-order-status').val(status);
+            if (status === 'Pending') {
+                $('#card-orders-pending-filter').addClass('border border-warning shadow-lg').css('background', 'rgba(245, 158, 11, 0.1)');
+                $('#card-orders-pending-subtext').html('<i class="fas fa-times me-1 text-danger"></i>Showing Pending (Click to reset)');
+            } else {
+                $('#card-orders-pending-filter').removeClass('border border-warning shadow-lg').css('background', '');
+                $('#card-orders-pending-subtext').html('<i class="fas fa-filter me-1"></i>Click to show pending');
+            }
+        }
+    }
+
+    $(document).on('click', '#card-orders-pending-filter', function () {
+        const currentVal = $('#filter-order-status').val();
+        if (currentVal === 'Pending') {
+            filterOrdersByStatus('all');
+            showToast('info', 'Showing all orders.');
+        } else {
+            filterOrdersByStatus('Pending');
+            showToast('info', 'Filtered to show pending orders.');
+        }
+    });
+
+    $(document).on('change', '#filter-order-status', function () {
+        filterOrdersByStatus($(this).val());
+    });
 
     // Cart Management
     $(document).on('click', '#add-to-cart-btn', function () {
@@ -2290,6 +3322,7 @@ $(document).ready(function () {
         $.get(`api/skus.php?action=detail&id=${skuId}`, function (res) {
             if (res.status === 'success') {
                 const sku = res.data;
+                const isDynamic = parseInt(sku.allow_dynamic_price) === 1;
                 
                 // Check if already in cart
                 const existIndex = orderCart.findIndex(item => item.id == sku.id);
@@ -2301,6 +3334,8 @@ $(document).ready(function () {
                         name: sku.sku_name,
                         code: sku.sku_code,
                         price: parseFloat(sku.selling_price),
+                        purchase_price: parseFloat(sku.purchase_price || 0),
+                        allow_dynamic_price: isDynamic,
                         gst_pct: parseFloat(sku.gst_percentage),
                         quantity: qty,
                         original_quantity: 0,
@@ -2338,6 +3373,36 @@ $(document).ready(function () {
         }
     });
 
+    function recalculateCartTotals() {
+        let grossTotal = 0;
+        let gstTotal = 0;
+        let grandTotal = 0;
+
+        orderCart.forEach((item, index) => {
+            const price = parseFloat(item.price) || 0;
+            const disc = parseFloat(item.discount) || 0;
+            const qty = parseInt(item.quantity) || 1;
+            const gstPct = parseFloat(item.gst_pct) || 0;
+            
+            const priceAfterDisc = Math.max(0, price - disc);
+            const rowSubtotal = priceAfterDisc * qty;
+            const rowGst = (rowSubtotal * gstPct) / 100;
+            const rowTotal = rowSubtotal + rowGst;
+
+            grossTotal += rowSubtotal;
+            gstTotal += rowGst;
+            grandTotal += rowTotal;
+
+            $(`#cart-row-gst-${index}`).html(`${gstPct}% <br><small class="text-secondary">(₹${rowGst.toFixed(2)})</small>`);
+            $(`#cart-row-total-${index}`).text(formatRupees(rowTotal));
+            $(`#cart-row-disc-total-${index}`).text(`-₹${(disc * qty).toFixed(2)}`);
+        });
+
+        $('#summary-gross').text(formatRupees(grossTotal));
+        $('#summary-gst').text(formatRupees(gstTotal));
+        $('#summary-grand').text(formatRupees(grandTotal));
+    }
+
     function renderOrderCartTable() {
         const tbody = $('#cart-rows');
         tbody.empty();
@@ -2350,14 +3415,16 @@ $(document).ready(function () {
             return;
         }
         
-        let grossTotal = 0;
-        let gstTotal = 0;
-        let grandTotal = 0;
+        const isOwner = window.userRole === 'Owner';
+        const isSpecialRetailer = !!window.selectedRetailerIsSpecial;
         
         orderCart.forEach((item, index) => {
-            // Calculate best discount
-            let bestDiscount = 0;
-            if (item.discount_rules && item.discount_rules.length > 0) {
+            const canEditDynamic = item.allow_dynamic_price || isOwner || isSpecialRetailer;
+            const minPurchase = parseFloat(item.purchase_price || 0);
+            
+            // Calculate best discount from rules if not dynamically edited
+            if (!canEditDynamic && item.discount_rules && item.discount_rules.length > 0) {
+                let bestDiscount = 0;
                 item.discount_rules.forEach(rule => {
                     const targetRate = parseFloat(rule.discount_value);
                     const deduction = item.price - targetRate;
@@ -2373,36 +3440,60 @@ $(document).ready(function () {
                         }
                     }
                 });
-                // Update item discount only if rules exist
+                // Ensure rule discount does not breach purchase rate
+                if (minPurchase > 0 && (item.price - bestDiscount) < minPurchase) {
+                    bestDiscount = Math.max(0, item.price - minPurchase);
+                }
                 item.discount = bestDiscount;
             }
             
-            
-            const itemPriceAfterDiscount = item.price - item.discount;
+            const itemPriceAfterDiscount = Math.max(0, item.price - item.discount);
             const rowSubtotal = itemPriceAfterDiscount * item.quantity;
             const rowTaxable = rowSubtotal;
             const rowGst = (rowTaxable * item.gst_pct) / 100;
             const rowTotal = rowTaxable + rowGst;
             
-            grossTotal += rowSubtotal;
-            gstTotal += rowGst;
-            grandTotal += rowTotal;
+            let rateCellHtml = '';
+            let discountCellHtml = '';
             
-            let totalDiscount = item.discount * item.quantity;
-            let discountText = item.discount > 0 ? `<span class="text-success fw-bold">-₹${item.discount.toFixed(2)}/pc</span><br><small class="text-success">-₹${totalDiscount.toFixed(2)}</small>` : '<span class="text-secondary">-</span>';
-            let rateDisplay = item.discount > 0 
-                ? `<del class="text-secondary small me-1">₹${item.price.toFixed(2)}</del>${formatRupees(itemPriceAfterDiscount)}` 
-                : formatRupees(item.price);
+            if (canEditDynamic) {
+                rateCellHtml = `
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="d-flex align-items-center justify-content-end">
+                            <input type="number" step="0.01" min="${minPurchase}" class="form-control form-control-sm text-end text-warning fw-bold cart-item-rate me-1" data-index="${index}" value="${item.price.toFixed(2)}" style="width: 95px;" title="Dynamic price editable (Min purchase rate: ₹${minPurchase.toFixed(2)})">
+                            <span class="badge bg-warning text-dark py-0 px-1" style="font-size: 10px;" title="Dynamic Rate Allowed"><i class="fas fa-edit"></i></span>
+                        </div>
+                        ${minPurchase > 0 ? `<small class="text-white-50 mt-1" style="font-size: 10px;">Cost: ₹${minPurchase.toFixed(2)}</small>` : ''}
+                    </div>
+                `;
+                discountCellHtml = `
+                    <div class="d-flex flex-column align-items-end">
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end text-success fw-bold cart-item-discount" data-index="${index}" value="${item.discount.toFixed(2)}" style="width: 85px;" placeholder="0.00" title="Custom discount per unit">
+                        <small class="text-success mt-1" id="cart-row-disc-total-${index}">-₹${(item.discount * item.quantity).toFixed(2)}</small>
+                    </div>
+                `;
+            } else {
+                let totalDiscount = item.discount * item.quantity;
+                let discountText = item.discount > 0 ? `<span class="text-success fw-bold">-₹${item.discount.toFixed(2)}/pc</span><br><small class="text-success">-₹${totalDiscount.toFixed(2)}</small>` : '<span class="text-secondary">-</span>';
+                
+                rateCellHtml = `
+                    <div class="d-flex align-items-center justify-content-end">
+                        <span class="fw-bold">${formatRupees(item.price)}</span>
+                        <span class="badge bg-secondary py-0 px-1 ms-1 text-white-50" style="font-size: 10px;" title="Fixed Rate"><i class="fas fa-lock"></i></span>
+                    </div>
+                `;
+                discountCellHtml = `<div class="text-end">${discountText}</div>`;
+            }
             
             tbody.append(`
                 <tr>
                     <td><strong>${item.name}</strong></td>
                     <td><code>${item.code}</code></td>
                     <td class="text-end fw-bold">${item.quantity}</td>
-                    <td class="text-end">${rateDisplay}</td>
-                    <td class="text-end">${discountText}</td>
-                    <td class="text-end">${item.gst_pct}% <br><small class="text-secondary">(₹${rowGst.toFixed(2)})</small></td>
-                    <td class="text-end fw-bold text-info">${formatRupees(rowTotal)}</td>
+                    <td class="text-end">${rateCellHtml}</td>
+                    <td class="text-end">${discountCellHtml}</td>
+                    <td class="text-end" id="cart-row-gst-${index}">${item.gst_pct}% <br><small class="text-secondary">(₹${rowGst.toFixed(2)})</small></td>
+                    <td class="text-end fw-bold text-info" id="cart-row-total-${index}">${formatRupees(rowTotal)}</td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger remove-cart-item" data-index="${index}"><i class="fas fa-times"></i></button>
                     </td>
@@ -2410,10 +3501,51 @@ $(document).ready(function () {
             `);
         });
         
-        $('#summary-gross').text(formatRupees(grossTotal)); // Base/Taxable Value
-        $('#summary-gst').text(formatRupees(gstTotal));
-        $('#summary-grand').text(formatRupees(grandTotal));
+        recalculateCartTotals();
     }
+
+    $(document).on('change', '.cart-item-rate', function () {
+        const index = $(this).data('index');
+        const newRate = parseFloat($(this).val());
+        const item = orderCart[index];
+        if (item) {
+            const minPurchase = parseFloat(item.purchase_price || 0);
+            if (!isNaN(newRate) && minPurchase > 0 && newRate < minPurchase) {
+                showToast('error', `Rate for "${item.name}" cannot go below purchase rate of ₹${minPurchase.toFixed(2)}.`);
+                $(this).val(Math.max(item.price, minPurchase).toFixed(2));
+                return;
+            }
+            if (!isNaN(newRate) && newRate >= 0) {
+                item.price = newRate;
+                if (minPurchase > 0 && (item.price - item.discount) < minPurchase) {
+                    item.discount = Math.max(0, item.price - minPurchase);
+                    $(`.cart-item-discount[data-index="${index}"]`).val(item.discount.toFixed(2));
+                }
+                recalculateCartTotals();
+            }
+        }
+    });
+
+    $(document).on('change', '.cart-item-discount', function () {
+        const index = $(this).data('index');
+        const newDisc = parseFloat($(this).val());
+        const item = orderCart[index];
+        if (item) {
+            const minPurchase = parseFloat(item.purchase_price || 0);
+            if (!isNaN(newDisc) && minPurchase > 0 && (item.price - newDisc) < minPurchase) {
+                showToast('error', `Discount cannot make rate lower than purchase rate of ₹${minPurchase.toFixed(2)}.`);
+                const maxDisc = Math.max(0, item.price - minPurchase);
+                $(this).val(maxDisc.toFixed(2));
+                item.discount = maxDisc;
+                recalculateCartTotals();
+                return;
+            }
+            if (!isNaN(newDisc) && newDisc >= 0) {
+                item.discount = newDisc;
+                recalculateCartTotals();
+            }
+        }
+    });
 
     // Place Order Submission
     $(document).on('submit', '#place-order-form', function (e) {
@@ -2421,6 +3553,22 @@ $(document).ready(function () {
         if (orderCart.length === 0) {
             showToast('error', 'Cart is empty. Please add items before submitting.');
             return;
+        }
+        
+        // Validate each cart item against purchase price
+        for (let i = 0; i < orderCart.length; i++) {
+            const it = orderCart[i];
+            const pPrice = parseFloat(it.purchase_price || 0);
+            if (pPrice > 0) {
+                if (it.price < pPrice) {
+                    showToast('error', `Rate for "${it.name}" (₹${it.price.toFixed(2)}) cannot go below purchase rate of ₹${pPrice.toFixed(2)}.`);
+                    return;
+                }
+                if ((it.price - it.discount) < pPrice) {
+                    showToast('error', `Effective rate for "${it.name}" after discount (₹${(it.price - it.discount).toFixed(2)}) cannot go below purchase rate of ₹${pPrice.toFixed(2)}.`);
+                    return;
+                }
+            }
         }
         
         // Compile Cart data to form payload
@@ -2432,6 +3580,7 @@ $(document).ready(function () {
             remarks: $('#ord-remarks').val(),
             sku_ids: orderCart.map(item => item.id),
             quantities: orderCart.map(item => item.quantity),
+            prices: orderCart.map(item => item.price),
             discounts: orderCart.map(item => item.discount)
         };
         
@@ -2592,9 +3741,10 @@ $(document).ready(function () {
                                 <td><span class="${statusColor}">${item.payment_status}</span></td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-outline-primary view-invoice-details-btn me-1" data-id="${item.id}" title="View Details"><i class="fas fa-eye"></i> View</button>
+                                    <button class="btn btn-sm btn-outline-danger btn-open-return-modal me-1" data-id="${item.id}" title="Sales Return / Credit Note"><i class="fas fa-undo-alt"></i> Return</button>
                                     <a href="print_invoice.php?id=${item.id}&type=customer&autoprint=1" target="_blank" class="btn btn-sm btn-outline-success me-1" title="Customer Copy">C</a>
                                     <a href="print_invoice.php?id=${item.id}&type=office&autoprint=1" target="_blank" class="btn btn-sm btn-outline-warning text-white me-1" title="Office Copy">O</a>
-                                    <a href="print_invoice.php?id=${item.id}&type=office&download=1" target="_blank" class="btn btn-sm btn-outline-danger" title="Download PDF"><i class="fas fa-file-pdf"></i> Download</a>
+                                    <a href="print_invoice.php?id=${item.id}&type=office&download=1" target="_blank" class="btn btn-sm btn-outline-secondary" title="Download PDF"><i class="fas fa-file-pdf"></i> Download</a>
                                 </td>
                             </tr>
                         `);
@@ -2615,11 +3765,16 @@ $(document).ready(function () {
         $.get(`api/invoices.php?action=detail&id=${id}`, function (res) {
             if (res.status === 'success') {
                 const i = res.data;
-                const company = JSON.parse(i.company_details);
-                const retailer = JSON.parse(i.retailer_details);
+                const company = JSON.parse(i.company_details || '{}');
+                const retailer = JSON.parse(i.retailer_details || '{}');
                 
-                $('#det-inv-shop').text(retailer.shop_name);
-                $('#det-inv-address').text(retailer.address);
+                $('#det-inv-shop').text(retailer.shop_name || 'N/A');
+                let addr = retailer.address || '';
+                if (retailer.area && addr.indexOf(retailer.area) === -1) addr += (addr ? ', ' : '') + retailer.area;
+                if (retailer.city && addr.indexOf(retailer.city) === -1) addr += (addr ? ', ' : '') + retailer.city;
+                if (retailer.pin_code && addr.indexOf(retailer.pin_code) === -1) addr += (addr ? ' - ' : '') + retailer.pin_code;
+                $('#det-inv-address').text(addr || 'N/A');
+                $('#det-inv-gst').text(retailer.gst_number && retailer.gst_number.trim() ? retailer.gst_number : 'N/A');
                 $('#det-inv-number').text(i.invoice_number);
                 $('#det-inv-date').text(i.invoice_date);
                 $('#det-inv-type').text(i.invoice_type);
@@ -2699,9 +3854,22 @@ $(document).ready(function () {
         $.get('api/payments.php?action=list')
             .done(function (res) {
                 if (res.status === 'success') {
+                    safeDestroyTable('#payments-table');
                     const rows = $('#payments-rows');
                     rows.empty();
+                    const hasActionCol = $('#payments-table thead th').length >= 11;
+                    
                     res.data.forEach(item => {
+                        let actionHtml = '';
+                        if (hasActionCol) {
+                            actionHtml = `
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-payment py-1 px-2" data-id="${item.id}" data-amount="${item.amount}" data-shop="${item.shop_name}" title="Delete Collection Receipt">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            `;
+                        }
                         rows.append(`
                             <tr>
                                 <td>#REC-${item.id}</td>
@@ -2714,6 +3882,7 @@ $(document).ready(function () {
                                 <td><span class="small text-white-50">${item.reference_number || 'N/A'}</span></td>
                                 <td><strong>${item.collector_name || 'Owner'}</strong></td>
                                 <td><span class="small text-secondary">${item.remarks || ''}</span></td>
+                                ${actionHtml}
                             </tr>
                         `);
                     });
@@ -2727,6 +3896,16 @@ $(document).ready(function () {
                 }
             });
             
+        // Load Collections Summary Stats
+        $.get('api/payments.php?action=stats', function(res) {
+            if (res.status === 'success' && res.data) {
+                $('#card-total-collection').text(formatRupees(res.data.total_collection || 0));
+                $('#card-month-collection').text(formatRupees(res.data.this_month_collection || 0));
+                $('#card-today-collection').text(formatRupees(res.data.today_collection || 0));
+                $('#card-total-receivables').text(formatRupees(res.data.total_receivables || 0));
+            }
+        });
+
         // Collect payment modal triggers
         if ($('#collect-payment-form').length > 0) {
             populateDropdown('api/beatroute.php?action=my_routes', '#pay-route', '-- Select Route --', 'id', 'route_name');
@@ -2735,6 +3914,25 @@ $(document).ready(function () {
             $('#pay-outstanding-val').text('₹0.00');
         }
     }
+
+    // Delete Payment Collection (Owner Only)
+    $(document).on('click', '.btn-delete-payment', function (e) {
+        e.preventDefault();
+        const payId = $(this).data('id');
+        const amount = $(this).data('amount');
+        const shop = $(this).data('shop');
+
+        if (confirm(`Are you sure you want to delete payment receipt #REC-${payId} (${formatRupees(amount)}) from "${shop}"?\n\nThis will reverse the payment credit and restore the customer's outstanding balance.`)) {
+            $.post('api/payments.php?action=delete', { id: payId }, function (res) {
+                if (res.status === 'success') {
+                    showToast('success', res.message);
+                    loadPayments();
+                } else {
+                    showToast('error', res.message);
+                }
+            });
+        }
+    });
 
     // Route -> Retailer dependency
     $(document).on('change', '#pay-route', function () {
@@ -2789,7 +3987,13 @@ $(document).ready(function () {
                     showToast('success', res.message);
                     $('#collectPaymentModal').modal('hide');
                     $('#collect-payment-form')[0].reset();
-                    loadPayments();
+                    if (currentRoute === 'retailers_outstanding') {
+                        loadRetailersOutstanding();
+                    } else if (currentRoute === 'retailers') {
+                        loadRetailers();
+                    } else {
+                        loadPayments();
+                    }
                 } else {
                     showToast('error', res.message);
                 }
@@ -3186,6 +4390,7 @@ $(document).ready(function () {
                 $('#set-invoice-prefix').val(s.invoice_prefix || '');
                 $('#set-default-limit').val(s.default_credit_limit || '50000.00');
                 $('#set-company-address').val(s.company_address || '');
+                $('#set-company-state').val(s.company_state || 'Goa');
                 $('#set-invoice-footer').val(s.invoice_footer || '');
                 $('#set-company-fssai').val(s.company_fssai || '');
                 $('#set-bank-name').val(s.bank_name || '');
@@ -3676,143 +4881,204 @@ $(document).ready(function () {
     function loadGstReport() {
         const startDate = $('#gst-start-date').val() || '';
         const endDate = $('#gst-end-date').val() || '';
-        
-        $.get(`api/gst.php?start_date=${startDate}&end_date=${endDate}`, function (res) {
-            if (res.status === 'success') {
-                const data = res.data;
-                const summary = data.summary;
-                
-                // Update KPI values
-                $('#lbl-outward-gst').text(formatRupees(summary.total_outward_gst));
-                $('#lbl-inward-gst').text(formatRupees(summary.total_inward_gst));
-                $('#lbl-inward-breakdown').text(`Purchases: ${formatRupees(summary.total_purchase_gst)} | Exp: ${formatRupees(summary.total_expense_gst)}`);
-                
-                const net = summary.net_payable;
-                $('#lbl-net-gst').text(formatRupees(Math.abs(net)));
-                if (net >= 0) {
-                    $('#lbl-net-gst').addClass('text-white').removeClass('text-success');
-                    $('#lbl-gst-liability-desc').text('Net payable to government');
+
+        safeDestroyTable('#gst-sales-table');
+        safeDestroyTable('#gst-credit-notes-table');
+        safeDestroyTable('#gst-purchases-table');
+        safeDestroyTable('#gst-expenses-table');
+
+        $('#gst-sales-body').html('<tr><td colspan="8" class="text-center py-3"><div class="spinner-border text-info spinner-border-sm me-2"></div>Loading outward sales...</td></tr>');
+        $('#gst-credit-notes-body').html('<tr><td colspan="9" class="text-center py-3"><div class="spinner-border text-danger spinner-border-sm me-2"></div>Loading credit notes...</td></tr>');
+        $('#gst-purchases-body').html('<tr><td colspan="8" class="text-center py-3"><div class="spinner-border text-success spinner-border-sm me-2"></div>Loading purchases...</td></tr>');
+        $('#gst-expenses-body').html('<tr><td colspan="8" class="text-center py-3"><div class="spinner-border text-warning spinner-border-sm me-2"></div>Loading expenses...</td></tr>');
+
+        $.get(`api/gst.php?start_date=${startDate}&end_date=${endDate}`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const sum = res.data.summary || {};
+                    const sales = res.data.sales || [];
+                    const creditNotes = res.data.credit_notes || [];
+                    const purchases = res.data.purchases || [];
+                    const expenses = res.data.expenses || [];
+
+                    // KPI cards
+                    $('#lbl-outward-gst').text(formatRupees(sum.total_outward_gst || 0));
+                    $('#lbl-inward-gst').text(formatRupees(sum.total_inward_gst || 0));
+                    $('#lbl-inward-breakdown').text(`Purchases: ${formatRupees(sum.total_purchase_gst || 0)} | Exp: ${formatRupees(sum.total_expense_gst || 0)}`);
+                    
+                    const net = sum.net_payable || 0;
+                    $('#lbl-net-gst').text(formatRupees(Math.abs(net)));
+                    if (net >= 0) {
+                        $('#lbl-net-gst').addClass('text-white').removeClass('text-success');
+                        $('#lbl-gst-liability-desc').text('Net payable to government');
+                    } else {
+                        $('#lbl-net-gst').addClass('text-success').removeClass('text-white');
+                        $('#lbl-gst-liability-desc').text('Excess Input Credit (Refundable)');
+                    }
+
+                    // 1. Sales Body
+                    safeDestroyTable('#gst-sales-table');
+                    const sBody = $('#gst-sales-body');
+                    sBody.empty();
+                    let sTax = 0, sDisc = 0, sGst = 0, sGrand = 0;
+                    if (sales.length === 0) {
+                        sBody.html('<tr><td colspan="8" class="text-center text-secondary py-3">No sales invoices found in this period.</td></tr>');
+                    } else {
+                        sales.forEach(s => {
+                            const sub = parseFloat(s.subtotal) || 0;
+                            const disc = parseFloat(s.discount_amount) || 0;
+                            const gst = parseFloat(s.gst_amount) || 0;
+                            const grand = parseFloat(s.grand_total) || 0;
+                            sTax += sub; sDisc += disc; sGst += gst; sGrand += grand;
+                            sBody.append(`
+                                <tr>
+                                    <td>${formatDate(s.invoice_date)}</td>
+                                    <td><strong>${s.invoice_number}</strong></td>
+                                    <td>${s.shop_name}</td>
+                                    <td>${s.gst_number || 'N/A'}</td>
+                                    <td class="text-end">${formatRupees(sub)}</td>
+                                    <td class="text-end text-danger">${formatRupees(disc)}</td>
+                                    <td class="text-end text-warning fw-bold">${formatRupees(gst)}</td>
+                                    <td class="text-end text-info fw-bold">${formatRupees(grand)}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+                    $('#gst-sales-total-subtotal').text(formatRupees(sTax));
+                    $('#gst-sales-total-discount').text(formatRupees(sDisc));
+                    $('#gst-sales-total-gst').text(formatRupees(sGst));
+                    $('#gst-sales-total-grand').text(formatRupees(sGrand));
+
+                    if (sales.length > 0) {
+                        datatables['gst-sales'] = $('#gst-sales-table').DataTable({
+                            order: [], pageLength: 10, ordering: true, destroy: true, stateSave: true
+                        });
+                    }
+
+                    // 2. Credit Notes Body
+                    safeDestroyTable('#gst-credit-notes-table');
+                    const cnBody = $('#gst-credit-notes-body');
+                    cnBody.empty();
+                    let cnTax = 0, cnGst = 0, cnGrand = 0;
+                    if (creditNotes.length === 0) {
+                        cnBody.html('<tr><td colspan="9" class="text-center text-secondary py-3">No credit notes / sales returns in this period.</td></tr>');
+                    } else {
+                        creditNotes.forEach(cn => {
+                            const sub = parseFloat(cn.taxable_amount) || 0;
+                            const gst = parseFloat(cn.gst_amount) || 0;
+                            const grand = parseFloat(cn.total_amount) || 0;
+                            cnTax += sub; cnGst += gst; cnGrand += grand;
+                            cnBody.append(`
+                                <tr>
+                                    <td>${formatDate(cn.return_date)}</td>
+                                    <td><strong class="text-danger">${cn.credit_note_number}</strong></td>
+                                    <td><strong class="text-info">${cn.invoice_number}</strong></td>
+                                    <td>${cn.shop_name}</td>
+                                    <td>${cn.gst_number || 'N/A'}</td>
+                                    <td class="text-end">${formatRupees(sub)}</td>
+                                    <td class="text-end text-danger fw-bold">${formatRupees(gst)}</td>
+                                    <td class="text-end fw-bold">${formatRupees(grand)}</td>
+                                    <td><span class="small text-secondary">${cn.reason || '-'}</span></td>
+                                </tr>
+                            `);
+                        });
+                    }
+                    $('#gst-cn-total-subtotal').text(formatRupees(cnTax));
+                    $('#gst-cn-total-gst').text(formatRupees(cnGst));
+                    $('#gst-cn-total-grand').text(formatRupees(cnGrand));
+
+                    if (creditNotes.length > 0) {
+                        datatables['gst-credit-notes'] = $('#gst-credit-notes-table').DataTable({
+                            order: [], pageLength: 10, ordering: true, destroy: true, stateSave: true
+                        });
+                    }
+
+                    // 3. Purchases Body
+                    safeDestroyTable('#gst-purchases-table');
+                    const pBody = $('#gst-purchases-body');
+                    pBody.empty();
+                    let pTax = 0, pDisc = 0, pGst = 0, pGrand = 0;
+                    if (purchases.length === 0) {
+                        pBody.html('<tr><td colspan="8" class="text-center text-secondary py-3">No stock purchases recorded in this period.</td></tr>');
+                    } else {
+                        purchases.forEach(p => {
+                            const sub = parseFloat(p.subtotal) || 0;
+                            const disc = parseFloat(p.discount_amount) || 0;
+                            const gst = parseFloat(p.gst_amount) || 0;
+                            const grand = parseFloat(p.grand_total) || 0;
+                            pTax += sub; pDisc += disc; pGst += gst; pGrand += grand;
+                            pBody.append(`
+                                <tr>
+                                    <td>${formatDate(p.purchase_date)}</td>
+                                    <td>
+                                        <a href="#" class="btn-view-purchase text-decoration-none" data-id="${p.id}">
+                                            <span class="badge bg-info px-2">${p.supplier_invoice} <i class="fas fa-eye small ms-1"></i></span>
+                                        </a>
+                                    </td>
+                                    <td><strong>${p.supplier_name || 'N/A'}</strong></td>
+                                    <td class="text-end font-monospace">${formatRupees(sub)}</td>
+                                    <td class="text-end font-monospace text-danger">${formatRupees(disc)}</td>
+                                    <td class="text-end font-monospace text-success fw-bold">${formatRupees(gst)}</td>
+                                    <td class="text-end font-monospace text-white fw-bold">${formatRupees(grand)}</td>
+                                    <td><span class="small text-secondary">${p.remarks || '-'}</span></td>
+                                </tr>
+                            `);
+                        });
+                    }
+                    $('#gst-pur-total-subtotal').text(formatRupees(pTax));
+                    $('#gst-pur-total-discount').text(formatRupees(pDisc));
+                    $('#gst-pur-total-gst').text(formatRupees(pGst));
+                    $('#gst-pur-total-grand').text(formatRupees(pGrand));
+
+                    if (purchases.length > 0) {
+                        datatables['gst-purchases'] = $('#gst-purchases-table').DataTable({
+                            order: [], pageLength: 10, ordering: true, destroy: true, stateSave: true
+                        });
+                    }
+
+                    // 4. Expenses Body
+                    safeDestroyTable('#gst-expenses-table');
+                    const eBody = $('#gst-expenses-body');
+                    eBody.empty();
+                    let eTax = 0, eGst = 0, eGrand = 0;
+                    if (expenses.length === 0) {
+                        eBody.html('<tr><td colspan="8" class="text-center text-secondary py-3">No GST expenses recorded in this period.</td></tr>');
+                    } else {
+                        expenses.forEach(e => {
+                            const sub = parseFloat(e.subtotal) || 0;
+                            const gst = parseFloat(e.gst_amount) || 0;
+                            const grand = parseFloat(e.grand_total) || 0;
+                            eTax += sub; eGst += gst; eGrand += grand;
+                            eBody.append(`
+                                <tr>
+                                    <td>${formatDate(e.expense_date)}</td>
+                                    <td><span class="badge bg-info text-dark px-2">${e.category}</span></td>
+                                    <td>${e.paid_to || 'N/A'}</td>
+                                    <td class="text-end font-monospace">${formatRupees(sub)}</td>
+                                    <td class="text-center font-monospace">${e.gst_percentage}%</td>
+                                    <td class="text-end font-monospace text-warning fw-bold">${formatRupees(gst)}</td>
+                                    <td class="text-end font-monospace text-white fw-bold">${formatRupees(grand)}</td>
+                                    <td><span class="small text-secondary">${e.remarks || '-'}</span></td>
+                                </tr>
+                            `);
+                        });
+                    }
+                    $('#gst-exp-total-subtotal').text(formatRupees(eTax));
+                    $('#gst-exp-total-gst').text(formatRupees(eGst));
+                    $('#gst-exp-total-grand').text(formatRupees(eGrand));
+
+                    if (expenses.length > 0) {
+                        datatables['gst-expenses'] = $('#gst-expenses-table').DataTable({
+                            order: [], pageLength: 10, ordering: true, destroy: true, stateSave: true
+                        });
+                    }
                 } else {
-                    $('#lbl-net-gst').addClass('text-success').removeClass('text-white');
-                    $('#lbl-gst-liability-desc').text('Excess Input Credit (Refundable)');
+                    showToast('error', res.message);
                 }
-                
-                // Populate Sales Table
-                safeDestroyTable('#gst-sales-table');
-                let salesRows = '';
-                let salesSubtotal = 0, salesGst = 0, salesGrand = 0;
-                
-                data.sales.forEach(item => {
-                    const sub = parseFloat(item.subtotal) || 0;
-                    const gst = parseFloat(item.gst_amount) || 0;
-                    const grand = parseFloat(item.grand_total) || 0;
-                    
-                    salesSubtotal += sub;
-                    salesGst += gst;
-                    salesGrand += grand;
-                    
-                    salesRows += `
-                        <tr>
-                            <td>${formatDate(item.invoice_date)}</td>
-                            <td><span class="badge bg-secondary px-2">${item.invoice_number}</span></td>
-                            <td>${item.shop_name}</td>
-                            <td><span class="small text-white-50">${item.gst_number || 'N/A'}</span></td>
-                            <td class="text-end font-monospace">${formatRupees(sub)}</td>
-                            <td class="text-end font-monospace text-warning">${formatRupees(gst)}</td>
-                            <td class="text-end font-monospace text-success">${formatRupees(grand)}</td>
-                        </tr>
-                    `;
-                });
-                $('#gst-sales-body').html(salesRows || '<tr><td colspan="7" class="text-center text-muted">No sales invoices found for the selected range.</td></tr>');
-                $('#gst-sales-total-subtotal').text(formatRupees(salesSubtotal));
-                $('#gst-sales-total-gst').text(formatRupees(salesGst));
-                $('#gst-sales-total-grand').text(formatRupees(salesGrand));
-                
-                if (salesRows) {
-                    datatables['gst-sales'] = $('#gst-sales-table').DataTable({ order: [],
-                        pageLength: 10, ordering: true, destroy: true, stateSave: true });
-                }
-                
-                // Populate Purchases Table
-                safeDestroyTable('#gst-purchases-table');
-                let purchaseRows = '';
-                let purSubtotal = 0, purGst = 0, purGrand = 0;
-                
-                data.purchases.forEach(item => {
-                    const sub = parseFloat(item.subtotal) || 0;
-                    const gst = parseFloat(item.gst_amount) || 0;
-                    const grand = parseFloat(item.grand_total) || 0;
-                    
-                    purSubtotal += sub;
-                    purGst += gst;
-                    purGrand += grand;
-                    
-                    purchaseRows += `
-                        <tr>
-                            <td>${formatDate(item.purchase_date)}</td>
-                            <td>
-                                <a href="#" class="btn-view-purchase text-decoration-none" data-id="${item.id}">
-                                    <span class="badge bg-info px-2">${item.supplier_invoice} <i class="fas fa-eye small ms-1"></i></span>
-                                </a>
-                            </td>
-                            <td><strong>${item.supplier_name}</strong></td>
-                            <td class="text-end font-monospace">${formatRupees(sub)}</td>
-                            <td class="text-end font-monospace text-warning">${formatRupees(gst)}</td>
-                            <td class="text-end font-monospace text-success">${formatRupees(grand)}</td>
-                            <td><span class="small text-white-50">${item.remarks || 'N/A'}</span></td>
-                        </tr>
-                    `;
-                });
-                $('#gst-purchases-body').html(purchaseRows || '<tr><td colspan="7" class="text-center text-muted">No purchases found for the selected range.</td></tr>');
-                $('#gst-pur-total-subtotal').text(formatRupees(purSubtotal));
-                $('#gst-pur-total-gst').text(formatRupees(purGst));
-                $('#gst-pur-total-grand').text(formatRupees(purGrand));
-                
-                if (purchaseRows) {
-                    datatables['gst-purchases'] = $('#gst-purchases-table').DataTable({ order: [],
-                        pageLength: 10, ordering: true, destroy: true, stateSave: true });
-                }
-                
-                // Populate Expenses/Assets Table
-                safeDestroyTable('#gst-expenses-table');
-                let expRows = '';
-                let expSubtotal = 0, expGst = 0, expGrand = 0;
-                
-                data.expenses.forEach(item => {
-                    const sub = parseFloat(item.subtotal) || 0;
-                    const gst = parseFloat(item.gst_amount) || 0;
-                    const grand = parseFloat(item.grand_total) || 0;
-                    
-                    expSubtotal += sub;
-                    expGst += gst;
-                    expGrand += grand;
-                    
-                    expRows += `
-                        <tr>
-                            <td>${formatDate(item.expense_date)}</td>
-                            <td><span class="badge bg-info text-dark px-2">${item.category}</span></td>
-                            <td>${item.paid_to || 'N/A'}</td>
-                            <td class="text-end font-monospace">${formatRupees(sub)}</td>
-                            <td class="text-center font-monospace">${item.gst_percentage}%</td>
-                            <td class="text-end font-monospace text-warning">${formatRupees(gst)}</td>
-                            <td class="text-end font-monospace text-success">${formatRupees(grand)}</td>
-                            <td><span class="small text-white-50">${item.remarks || 'N/A'}</span></td>
-                        </tr>
-                    `;
-                });
-                $('#gst-expenses-body').html(expRows || '<tr><td colspan="8" class="text-center text-muted">No GST expenses found for the selected range.</td></tr>');
-                $('#gst-exp-total-subtotal').text(formatRupees(expSubtotal));
-                $('#gst-exp-total-gst').text(formatRupees(expGst));
-                $('#gst-exp-total-grand').text(formatRupees(expGrand));
-                
-                if (expRows) {
-                    datatables['gst-expenses'] = $('#gst-expenses-table').DataTable({ order: [],
-                        pageLength: 10, ordering: true, destroy: true, stateSave: true });
-                }
-            } else {
-                showToast('error', res.message);
-            }
-        });
+            })
+            .fail(function () {
+                showToast('error', 'Failed to load GST report.');
+            });
     }
 
     // Filter button trigger
@@ -4290,7 +5556,7 @@ $(document).ready(function () {
                     $('#ord-beatroute').val(window.pendingOrderRouteId);
                     window.pendingOrderRouteId = null;
                     
-                    let url = 'api/retailers.php?action=list&route_id=' + $('#ord-beatroute').val();
+                    let url = 'api/retailers.php?action=list&status=Active&route_id=' + $('#ord-beatroute').val();
                     populateDropdown(url, '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
                         if (window.pendingOrderRetailerId) {
                             $('#ord-retailer').val(window.pendingOrderRetailerId).trigger('change');
@@ -4303,7 +5569,7 @@ $(document).ready(function () {
                             const order = res.data;
                             const items = res.data.items || [];
                             
-                            populateDropdown('api/retailers.php?action=list', '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
+                            populateDropdown('api/retailers.php?action=list&status=Active', '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name').done(function() {
                                 $('#ord-retailer').val(order.retailer_id).trigger('change');
                             });
                             
@@ -4314,6 +5580,8 @@ $(document).ready(function () {
                                 name: i.sku_name || 'Item',
                                 code: i.sku_code || '---',
                                 price: parseFloat(i.price),
+                                purchase_price: parseFloat(i.purchase_price || 0),
+                                allow_dynamic_price: parseInt(i.allow_dynamic_price) === 1,
                                 gst_pct: parseFloat(i.gst_percentage),
                                 quantity: parseInt(i.quantity),
                                 original_quantity: parseInt(i.quantity),
@@ -4323,11 +5591,14 @@ $(document).ready(function () {
                             renderOrderCartTable();
                         }
                     });
+                } else {
+                    populateDropdown('api/retailers.php?action=list&status=Active', '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name');
                 }
             });
             populateDropdown('api/suppliers.php?action=list', '#cart-supplier-select', '-- Select Supplier --', 'id', 'name');
             
             // Reset Cascading Drops
+            window.selectedRetailerIsSpecial = false;
             $('#cart-category-select').html('<option value="">-- Select Category --</option>').prop('disabled', true);
             $('#cart-product-select').html('<option value="">-- Select Product --</option>').prop('disabled', true);
             $('#cart-sku-select').html('<option value="">-- Select SKU --</option>').prop('disabled', true);
@@ -4343,30 +5614,42 @@ $(document).ready(function () {
     // Beat Route selection changed -> filter retailers
     $(document).on('change', '#ord-beatroute', function() {
         const routeId = $(this).val();
-        let url = 'api/retailers.php?action=list';
+        let url = 'api/retailers.php?action=list&status=Active';
         if (routeId) {
             url += '&route_id=' + routeId;
         }
         $('#ord-retailer').html('<option value="">Loading...</option>');
         populateDropdown(url, '#ord-retailer', '-- Select Retailer Shop --', 'id', 'shop_name');
+        window.selectedRetailerIsSpecial = false;
         $('#retailer-details-card').addClass('d-none');
+        renderOrderCartTable();
     });
 
     // Retailer selection changed -> load details
     $(document).on('change', '#ord-retailer', function() {
         const id = $(this).val();
         if (!id) {
+            window.selectedRetailerIsSpecial = false;
             $('#retailer-details-card').addClass('d-none');
+            renderOrderCartTable();
             return;
         }
         $.get(`api/retailers.php?action=detail&id=${id}`, function(res) {
             if(res.status === 'success') {
                 const r = res.data;
-                $('#rd-shop-name').text(r.shop_name);
+                window.selectedRetailerIsSpecial = (parseInt(r.is_special) === 1);
+                
+                let specialBadge = window.selectedRetailerIsSpecial 
+                    ? `<span class="badge bg-warning text-dark ms-2"><i class="fas fa-star"></i> Special Retailer (Dynamic Rates Enabled)</span>` 
+                    : '';
+                $('#rd-shop-name').html(`${r.shop_name}${specialBadge}`);
                 $('#rd-address').text(`${r.address}, ${r.area}, ${r.city}`);
                 $('#rd-mobile').text(r.mobile || 'N/A');
                 $('#rd-gst').text(r.gst_number || 'Unregistered');
                 $('#retailer-details-card').removeClass('d-none');
+                
+                // Re-render cart with dynamic editable inputs enabled if retailer is special
+                renderOrderCartTable();
             }
         });
     });
@@ -4601,6 +5884,1065 @@ $(document).ready(function () {
 
     $(document).on('shown.bs.tab', '#supplier-payments-tab', function () {
         loadSupplierPayments();
+    });
+
+    // ====================================================
+    // COUNTER SALE (RETAIL / POS) CONTROLLER & LOGIC
+    // ====================================================
+    let counterCart = [];
+    let counterSkusData = [];
+
+    window.loadCounterSale = function() {
+        if ($('#counter-sale-form').length === 0) return;
+
+        counterCart = [];
+        renderCounterCart();
+
+        // 1. Load today's stats
+        loadCounterSaleStats();
+
+        // 2. Load SKUs for item selector
+        $.get('api/counter_sale.php?action=skus', function(res) {
+            if (res.status === 'success') {
+                counterSkusData = res.data;
+                let opts = '<option value="">-- Choose Item / Search by Name or Code --</option>';
+                res.data.forEach(sku => {
+                    const price = parseFloat(sku.selling_price || 0).toFixed(2);
+                    const stock = parseInt(sku.current_stock || 0);
+                    const unit = sku.unit || 'Pcs';
+                    opts += `<option value="${sku.id}" data-price="${price}" data-stock="${stock}" data-gst="${sku.gst_percentage || 0}" data-unit="${unit}">${sku.sku_name} (${sku.sku_code}) - ₹${price} [Stock: ${stock} ${unit}]</option>`;
+                });
+                $('#cs-item-select').html(opts);
+
+                // Initialize Select2 if available
+                if ($.fn.select2) {
+                    $('#cs-item-select').select2({
+                        theme: 'bootstrap-5',
+                        placeholder: '-- Choose Item / Search by Name or Code --',
+                        allowClear: true,
+                        width: '100%'
+                    });
+                }
+            }
+        });
+
+        // 3. Load Recent Counter Sales History
+        loadCounterSaleHistory();
+    };
+
+    function loadCounterSaleStats() {
+        $.get('api/counter_sale.php?action=stats', function(res) {
+            if (res.status === 'success' && res.data) {
+                $('#cs-today-count').text((res.data.total_sales_count || 0) + ' Sales');
+                $('#cs-today-revenue').text(formatRupees(res.data.total_revenue || 0));
+            }
+        });
+    }
+
+    function calculateCounterItemLiveTotal() {
+        const skuId = $('#cs-item-select').val();
+        if (!skuId) {
+            $('#cs-line-total-display').text('₹0.00');
+            return;
+        }
+
+        const sku = counterSkusData.find(s => s.id == skuId);
+        const qty = parseInt($('#cs-qty-input').val()) || 1;
+        const price = parseFloat($('#cs-price-input').val()) || 0;
+        const discount = parseFloat($('#cs-discount-input').val()) || 0;
+        const gstPct = sku ? parseFloat(sku.gst_percentage || 0) : 0;
+
+        const gross = price * qty;
+        const disc = Math.min(gross, Math.max(0, discount));
+        const taxable = Math.max(0, gross - disc);
+        const gst = (taxable * gstPct) / 100.0;
+        const total = taxable + gst;
+
+        const gstNote = gst > 0 ? ` <small class="text-secondary" style="font-size: 11px;">(incl. ₹${gst.toFixed(2)} GST)</small>` : '';
+        $('#cs-line-total-display').html(`₹${total.toFixed(2)}${gstNote}`);
+    }
+
+    // When SKU selection changes
+    $(document).on('change', '#cs-item-select', function() {
+        const skuId = $(this).val();
+        if (!skuId) {
+            $('#cs-stock-display').val('0');
+            $('#cs-price-input').val('0.00');
+            $('#cs-discount-input').val('0.00');
+            $('#cs-qty-input').val('1');
+            $('#cs-line-total-display').text('₹0.00');
+            $('#cs-selected-item-info').html('<i class="fas fa-info-circle me-1"></i>Select an item to view details &amp; add to bill.');
+            return;
+        }
+
+        const sku = counterSkusData.find(s => s.id == skuId);
+        if (sku) {
+            let availableStock = parseInt(sku.current_stock || 0);
+            
+            // Adjust for items already in cart
+            const inCartItem = counterCart.find(i => i.sku_id == skuId);
+            if (inCartItem) {
+                availableStock -= inCartItem.quantity;
+            }
+
+            $('#cs-stock-display').val(availableStock);
+            $('#cs-price-input').val(parseFloat(sku.selling_price || 0).toFixed(2));
+            $('#cs-discount-input').val('0.00');
+            $('#cs-qty-input').val('1');
+
+            $('#cs-selected-item-info').html(`
+                <span class="text-white fw-bold">${sku.sku_name}</span> | 
+                <span class="text-info">${sku.sku_code}</span> | 
+                <span>Brand: ${sku.brand_name || 'N/A'}</span> | 
+                <span>GST: ${sku.gst_percentage}%</span> | 
+                <span>MRP: ₹${parseFloat(sku.mrp || 0).toFixed(2)}</span>
+            `);
+
+            calculateCounterItemLiveTotal();
+        }
+    });
+
+    // Inputs live calculation
+    $(document).on('input change', '#cs-price-input, #cs-discount-input, #cs-qty-input', function() {
+        calculateCounterItemLiveTotal();
+    });
+
+    // Qty stepper buttons
+    $(document).on('click', '#cs-qty-plus', function() {
+        let val = parseInt($('#cs-qty-input').val()) || 1;
+        $('#cs-qty-input').val(val + 1).trigger('change');
+    });
+
+    $(document).on('click', '#cs-qty-minus', function() {
+        let val = parseInt($('#cs-qty-input').val()) || 1;
+        if (val > 1) {
+            $('#cs-qty-input').val(val - 1).trigger('change');
+        }
+    });
+
+    // Add item to cart
+    $(document).on('click', '#cs-add-item-btn', function() {
+        const skuId = $('#cs-item-select').val();
+        if (!skuId) {
+            showToast('error', 'Please select an item first.');
+            return;
+        }
+
+        const sku = counterSkusData.find(s => s.id == skuId);
+        if (!sku) {
+            showToast('error', 'Selected item not found.');
+            return;
+        }
+
+        const qty = parseInt($('#cs-qty-input').val()) || 1;
+        const price = parseFloat($('#cs-price-input').val()) || 0;
+        const discount = parseFloat($('#cs-discount-input').val()) || 0;
+
+        if (qty <= 0) {
+            showToast('error', 'Quantity must be at least 1.');
+            return;
+        }
+
+        if (price < 0) {
+            showToast('error', 'Price cannot be negative.');
+            return;
+        }
+
+        const totalStock = parseInt(sku.current_stock || 0);
+        const existIndex = counterCart.findIndex(i => i.sku_id == skuId);
+        let currentInCartQty = existIndex > -1 ? counterCart[existIndex].quantity : 0;
+        
+        if ((currentInCartQty + qty) > totalStock) {
+            showToast('error', `Insufficient stock for ${sku.sku_name}. Available: ${totalStock}, Total requested: ${currentInCartQty + qty}`);
+            return;
+        }
+
+        if (existIndex > -1) {
+            counterCart[existIndex].quantity += qty;
+            counterCart[existIndex].price = price;
+            counterCart[existIndex].discount += discount;
+        } else {
+            counterCart.push({
+                sku_id: parseInt(sku.id),
+                sku_name: sku.sku_name,
+                sku_code: sku.sku_code,
+                unit: sku.unit || 'Pcs',
+                price: price,
+                quantity: qty,
+                discount: discount,
+                gst_pct: parseFloat(sku.gst_percentage || 0),
+                current_stock: totalStock
+            });
+        }
+
+        // Reset Item selection box for next entry
+        $('#cs-item-select').val('').trigger('change');
+        $('#cs-qty-input').val('1');
+        $('#cs-price-input').val('0.00');
+        $('#cs-discount-input').val('0.00');
+        $('#cs-stock-display').val('0');
+        $('#cs-line-total-display').text('₹0.00');
+
+        renderCounterCart();
+        showToast('success', `${sku.sku_name} added to bill.`);
+    });
+
+    // Clear cart items
+    $(document).on('click', '#cs-clear-cart-btn', function() {
+        if (counterCart.length === 0) return;
+        if (!confirm('Clear all items from the current bill?')) return;
+        counterCart = [];
+        renderCounterCart();
+        $('#cs-item-select').trigger('change');
+    });
+
+    // Remove single cart item
+    $(document).on('click', '.cs-remove-cart-item', function() {
+        const idx = $(this).data('index');
+        const removed = counterCart[idx];
+        counterCart.splice(idx, 1);
+        renderCounterCart();
+        if ($('#cs-item-select').val() == removed.sku_id) {
+            $('#cs-item-select').trigger('change');
+        }
+    });
+
+    // In-table dynamic modifications
+    $(document).on('input change', '.cs-cart-row-qty', function() {
+        const idx = $(this).data('index');
+        const newQty = parseInt($(this).val()) || 1;
+        if (counterCart[idx]) {
+            if (newQty > counterCart[idx].current_stock) {
+                showToast('warning', `Max available stock is ${counterCart[idx].current_stock}`);
+                $(this).val(counterCart[idx].current_stock);
+                counterCart[idx].quantity = counterCart[idx].current_stock;
+            } else {
+                counterCart[idx].quantity = Math.max(1, newQty);
+            }
+            renderCounterCart();
+        }
+    });
+
+    $(document).on('input change', '.cs-cart-row-price', function() {
+        const idx = $(this).data('index');
+        const newPrice = parseFloat($(this).val()) || 0;
+        if (counterCart[idx]) {
+            counterCart[idx].price = Math.max(0, newPrice);
+            renderCounterCart();
+        }
+    });
+
+    $(document).on('input change', '.cs-cart-row-discount', function() {
+        const idx = $(this).data('index');
+        const newDisc = parseFloat($(this).val()) || 0;
+        if (counterCart[idx]) {
+            counterCart[idx].discount = Math.max(0, newDisc);
+            renderCounterCart();
+        }
+    });
+
+    // Render Counter Cart Table & Summary
+    function renderCounterCart() {
+        const tbody = $('#cs-cart-rows');
+        tbody.empty();
+
+        if (counterCart.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="8" class="text-center text-secondary py-4">
+                        <i class="fas fa-shopping-basket fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                        No items in this counter sale yet. Select an item above and click "Add to Current Bill".
+                    </td>
+                </tr>
+            `);
+            $('#cs-summary-items-count').text('0 items (0 units)');
+            $('#cs-summary-subtotal').text('₹0.00');
+            $('#cs-summary-discount').text('-₹0.00');
+            $('#cs-summary-gst').text('₹0.00');
+            $('#cs-summary-grand').text('₹0.00');
+            return;
+        }
+
+        let totalUnits = 0;
+        let grossTotal = 0;
+        let discountTotal = 0;
+        let gstTotal = 0;
+        let grandTotal = 0;
+
+        counterCart.forEach((item, index) => {
+            const qty = item.quantity;
+            const price = item.price;
+            const disc = item.discount;
+            const gstPct = item.gst_pct;
+
+            const lineGross = price * qty;
+            const lineDisc = Math.min(lineGross, disc);
+            const lineTaxable = Math.max(0, lineGross - lineDisc);
+            const lineGst = (lineTaxable * gstPct) / 100.0;
+            const lineTotal = lineTaxable + lineGst;
+
+            totalUnits += qty;
+            grossTotal += lineGross;
+            discountTotal += lineDisc;
+            gstTotal += lineGst;
+            grandTotal += lineTotal;
+
+            tbody.append(`
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <div class="fw-bold text-white">${item.sku_name}</div>
+                        <small class="text-secondary"><code>${item.sku_code}</code> | ${item.unit}</small>
+                    </td>
+                    <td class="text-end">
+                        <input type="number" min="1" max="${item.current_stock}" class="form-control form-control-sm text-center fw-bold cs-cart-row-qty" data-index="${index}" value="${qty}" style="width: 75px; display: inline-block;">
+                    </td>
+                    <td class="text-end">
+                        <div class="input-group input-group-sm justify-content-end">
+                            <span class="input-group-text bg-dark border-secondary text-warning px-1">₹</span>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end fw-bold text-warning cs-cart-row-price" data-index="${index}" value="${price.toFixed(2)}" style="width: 80px;">
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="input-group input-group-sm justify-content-end">
+                            <span class="input-group-text bg-dark border-secondary text-success px-1">-₹</span>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end fw-bold text-success cs-cart-row-discount" data-index="${index}" value="${disc.toFixed(2)}" style="width: 75px;">
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <span class="badge bg-secondary">${gstPct}%</span>
+                        <div class="text-secondary" style="font-size: 11px;">₹${lineGst.toFixed(2)}</div>
+                    </td>
+                    <td class="text-end fw-bold text-info fs-6">
+                        ${formatRupees(lineTotal)}
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-danger cs-remove-cart-item" data-index="${index}" title="Remove Item">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+
+        $('#cs-summary-items-count').text(`${counterCart.length} items (${totalUnits} units)`);
+        $('#cs-summary-subtotal').text(formatRupees(grossTotal));
+        $('#cs-summary-discount').text(`-` + formatRupees(discountTotal));
+        $('#cs-summary-gst').text(formatRupees(gstTotal));
+        $('#cs-summary-grand').text(formatRupees(grandTotal));
+    }
+
+    // Payment method selector logic
+    $(document).on('change', 'input[name="payment_method"]', function() {
+        const method = $(this).val();
+        if (method === 'UPI') {
+            $('#cs-upi-ref-group').slideDown(200);
+        } else {
+            $('#cs-upi-ref-group').slideUp(200);
+        }
+    });
+
+    // Submit Counter Sale
+    $(document).on('submit', '#counter-sale-form', function(e) {
+        e.preventDefault();
+
+        // If cart is empty, check if an item is selected in the entry form
+        if (counterCart.length === 0) {
+            const selectedSkuId = $('#cs-item-select').val();
+            if (selectedSkuId) {
+                $('#cs-add-item-btn').trigger('click');
+            } else {
+                showToast('error', 'Please select an item to add to the sale.');
+                return;
+            }
+        }
+
+        if (counterCart.length === 0) {
+            showToast('error', 'Cart is empty. Please add items before submitting.');
+            return;
+        }
+
+        const submitBtn = $('#btn-submit-counter-sale');
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Processing Sale...');
+
+        const payload = {
+            customer_name: $('#cs-customer-name').val() || 'Walk-in Customer',
+            customer_mobile: $('#cs-customer-mobile').val() || '',
+            payment_method: $('input[name="payment_method"]:checked').val() || 'Cash',
+            payment_ref: $('#cs-payment-ref').val() || '',
+            remarks: $('#cs-sale-remarks').val() || '',
+            sale_date: new Date().toISOString().split('T')[0],
+            sku_ids: counterCart.map(i => i.sku_id),
+            quantities: counterCart.map(i => i.quantity),
+            prices: counterCart.map(i => i.price),
+            discounts: counterCart.map(i => i.discount)
+        };
+
+        $.post('api/counter_sale.php?action=create', payload)
+            .done(function(res) {
+                if (res.status === 'success') {
+                    showToast('success', res.message);
+
+                    // Populate success modal
+                    $('#modal-cs-invoice-num').text(res.data.invoice_number);
+                    $('#modal-cs-customer').text(res.data.customer_name);
+                    $('#modal-cs-payment').text(res.data.payment_method);
+                    $('#modal-cs-total').text(formatRupees(res.data.grand_total));
+                    $('#modal-cs-print-btn').attr('href', `print_invoice.php?id=${res.data.invoice_id}`);
+
+                    // Show success modal
+                    const modal = new bootstrap.Modal(document.getElementById('counterSaleSuccessModal'));
+                    modal.show();
+
+                    // Reset form & cart
+                    counterCart = [];
+                    renderCounterCart();
+                    $('#counter-sale-form')[0].reset();
+                    $('#cs-item-select').val('').trigger('change');
+                    $('#cs-customer-name').val('Walk-in Customer');
+                    $('#cs-pay-cash').prop('checked', true);
+                    $('#cs-upi-ref-group').hide();
+
+                    // Reload stats & history
+                    loadCounterSaleStats();
+                    loadCounterSaleHistory();
+                } else {
+                    showToast('error', res.message);
+                }
+            })
+            .fail(function(xhr) {
+                showToast('error', 'Failed to process sale. Please try again.');
+            })
+            .always(function() {
+                submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle fs-5"></i><span class="fs-5">Add Sale</span>');
+            });
+    });
+
+    // History Table Loader
+    function loadCounterSaleHistory() {
+        const dateVal = $('#cs-history-date-filter').val() || '';
+        let url = 'api/counter_sale.php?action=list';
+        if (dateVal) {
+            url += '&date=' + dateVal;
+        }
+
+        $.get(url, function(res) {
+            if (res.status === 'success') {
+                let html = '';
+                if (res.data.length === 0) {
+                    html = '<tr><td colspan="7" class="text-center text-secondary py-4">No counter sales found for selected date.</td></tr>';
+                } else {
+                    res.data.forEach(s => {
+                        let payBadge = '<span class="badge bg-success">Cash</span>';
+                        if (s.payment_mode === 'UPI') payBadge = '<span class="badge bg-info text-dark">UPI</span>';
+                        else if (s.payment_mode === 'Card') payBadge = '<span class="badge bg-warning text-dark">Card</span>';
+
+                        html += `
+                            <tr>
+                                <td><strong class="text-info">${s.invoice_number}</strong></td>
+                                <td>${formatDate(s.invoice_date)}</td>
+                                <td>
+                                    <div class="fw-bold text-white">${s.customer_display_name}</div>
+                                    ${s.customer_mobile ? `<small class="text-secondary"><i class="fas fa-phone me-1"></i>${s.customer_mobile}</small>` : ''}
+                                </td>
+                                <td><span class="badge bg-secondary">${s.items_count} items</span></td>
+                                <td>${payBadge}</td>
+                                <td class="text-end fw-bold text-success fs-6">${formatRupees(s.grand_total)}</td>
+                                <td class="text-center">
+                                    <a href="print_invoice.php?id=${s.id}" target="_blank" class="btn btn-action primary btn-sm" title="Print Bill">
+                                        <i class="fas fa-print me-1"></i> Print
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                safeDestroyTable('#counter-sales-history-table');
+                $('#counter-sales-history-rows').html(html);
+
+                if (res.data.length > 0) {
+                    datatables['counter-sales-history-table'] = $('#counter-sales-history-table').DataTable({
+                        pageLength: 20,
+                        order: [[0, 'desc']],
+                        destroy: true
+                    });
+                }
+            }
+        });
+    }
+
+    $(document).on('change', '#cs-history-date-filter', function() {
+        loadCounterSaleHistory();
+    });
+
+    $(document).on('click', '#cs-history-reload-btn', function() {
+        loadCounterSaleHistory();
+        loadCounterSaleStats();
+    });
+
+    $(document).on('shown.bs.tab', '#history-tab', function() {
+        loadCounterSaleHistory();
+    });
+
+    // ----------------------------------------------------
+    // MANAGEMENT REPORTS CONTROLLER (Owner Only)
+    // ----------------------------------------------------
+    function loadReports() {
+        // 1. Populate Product Dropdown if empty
+        if ($('#filter-product-report-id option').length <= 1) {
+            $.get('api/products.php?action=list', function (res) {
+                if (res.status === 'success') {
+                    const select = $('#filter-product-report-id');
+                    select.find('option:not(:first)').remove();
+                    res.data.forEach(p => {
+                        select.append(`<option value="${p.id}">${p.name} (${p.brand_name || 'General'})</option>`);
+                    });
+                }
+            });
+        }
+
+        // 2. Populate Retailer Dropdown if empty
+        if ($('#filter-retailer-report-id option').length <= 1) {
+            $.get('api/retailers.php?action=list', function (res) {
+                if (res.status === 'success') {
+                    const select = $('#filter-retailer-report-id');
+                    select.find('option:not(:first)').remove();
+                    res.data.forEach(r => {
+                        select.append(`<option value="${r.id}">${r.shop_name} - ${r.name} (${r.area || r.city})</option>`);
+                    });
+                }
+            });
+        }
+
+        // Load active reports
+        loadProductGrossEarnings();
+        loadRetailerGrossEarnings();
+    }
+
+    function loadProductGrossEarnings() {
+        const month = $('#filter-product-report-month').val() || '';
+        const productId = $('#filter-product-report-id').val() || 0;
+
+        safeDestroyTable('#product-earnings-table');
+        const rows = $('#product-earnings-rows');
+        rows.html('<tr><td colspan="10" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm me-2"></div>Calculating product gross earnings...</td></tr>');
+
+        $.get(`api/reports.php?type=product_gross_earning&month=${month}&product_id=${productId}&format=json`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const summary = res.data.summary || {};
+                    const period = res.data.period || {};
+                    const items = res.data.items || [];
+
+                    $('#product-report-period-badge').text(period.month_label || 'Selected Month');
+                    $('#kpi-product-total-units').text(Number(summary.total_units || 0).toLocaleString('en-IN'));
+                    $('#kpi-product-total-sales').text(formatRupees(summary.total_taxable_sales || 0));
+                    $('#kpi-product-total-cost').text(formatRupees(summary.total_cost || 0));
+                    $('#kpi-product-gross-earning').text(formatRupees(summary.gross_earning || 0));
+                    $('#kpi-product-margin-pct').text(`Margin: ${summary.margin_percentage || 0}%`);
+
+                    rows.empty();
+                    if (items.length === 0) {
+                        rows.html('<tr><td colspan="10" class="text-center text-secondary py-4">No invoiced sales recorded for this product/selection in this month.</td></tr>');
+                    } else {
+                        items.forEach(item => {
+                            const margin = parseFloat(item.margin_percentage) || 0;
+                            let marginBadge = `<span class="badge bg-secondary">${margin}%</span>`;
+                            if (margin >= 20) marginBadge = `<span class="badge bg-success fw-bold">${margin}%</span>`;
+                            else if (margin >= 10) marginBadge = `<span class="badge bg-info text-dark fw-bold">${margin}%</span>`;
+                            else if (margin > 0) marginBadge = `<span class="badge bg-warning text-dark">${margin}%</span>`;
+                            else if (margin < 0) marginBadge = `<span class="badge bg-danger">${margin}%</span>`;
+
+                            rows.append(`
+                                <tr>
+                                    <td>
+                                        <strong class="text-white">${item.product_name}</strong>
+                                        <br><span class="small text-secondary">${item.brand_name}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-info fw-semibold">${item.sku_name}</span>
+                                        <br><span class="small text-secondary badge bg-dark border border-secondary">${item.sku_code}</span>
+                                    </td>
+                                    <td class="text-center small text-secondary">${item.hsn_code || '-'}</td>
+                                    <td class="text-end fw-bold text-white">${Number(item.total_units_sold).toLocaleString('en-IN')} ${item.unit || 'pcs'}</td>
+                                    <td class="text-end text-secondary">${formatRupees(item.avg_selling_rate)}</td>
+                                    <td class="text-end text-secondary">${formatRupees(item.avg_cost_rate)}</td>
+                                    <td class="text-end fw-bold text-primary">${formatRupees(item.total_taxable_sales)}</td>
+                                    <td class="text-end text-danger">${formatRupees(item.total_cost_of_goods)}</td>
+                                    <td class="text-end fw-bold fs-6 ${item.gross_earning >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${formatRupees(item.gross_earning)}
+                                    </td>
+                                    <td class="text-center">${marginBadge}</td>
+                                </tr>
+                            `);
+                        });
+
+                        datatables['product_earnings'] = $('#product-earnings-table').DataTable({
+                            order: [[8, 'desc']],
+                            pageLength: 25,
+                            ordering: true,
+                            destroy: true,
+                            stateSave: true,
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                                { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                                { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Table', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                            ]
+                        });
+                    }
+                }
+            })
+            .fail(function () {
+                rows.html('<tr><td colspan="10" class="text-center text-danger py-4">Failed to load product gross earnings report.</td></tr>');
+            });
+    }
+
+    function loadRetailerGrossEarnings() {
+        const month = $('#filter-retailer-report-month').val() || '';
+        const retailerId = $('#filter-retailer-report-id').val() || 0;
+
+        safeDestroyTable('#retailer-earnings-table');
+        const rows = $('#retailer-earnings-rows');
+        rows.html('<tr><td colspan="10" class="text-center py-4"><div class="spinner-border text-success spinner-border-sm me-2"></div>Calculating retailer gross earnings...</td></tr>');
+
+        $.get(`api/reports.php?type=retailer_gross_earning&month=${month}&retailer_id=${retailerId}&format=json`)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const summary = res.data.summary || {};
+                    const period = res.data.period || {};
+                    const items = res.data.items || [];
+
+                    $('#retailer-report-period-badge').text(period.month_label || 'Selected Month');
+                    $('#kpi-retailer-total-invoices').text(`${summary.total_invoices || 0} Invoices`);
+                    $('#kpi-retailer-total-units').text(`${Number(summary.total_units || 0).toLocaleString('en-IN')} Units Bought`);
+                    $('#kpi-retailer-total-sales').text(formatRupees(summary.total_gross_sales || 0));
+                    $('#kpi-retailer-total-cost').text(formatRupees(summary.total_cost || 0));
+                    $('#kpi-retailer-gross-earning').text(formatRupees(summary.gross_earning || 0));
+                    $('#kpi-retailer-margin-pct').text(`Margin: ${summary.margin_percentage || 0}% | Collections: ${formatRupees(summary.total_collections || 0)}`);
+
+                    rows.empty();
+                    if (items.length === 0) {
+                        rows.html('<tr><td colspan="10" class="text-center text-secondary py-4">No invoiced sales or activity found for this retailer/selection in this month.</td></tr>');
+                    } else {
+                        items.forEach(item => {
+                            const margin = parseFloat(item.margin_percentage) || 0;
+                            let marginBadge = `<span class="badge bg-secondary">${margin}%</span>`;
+                            if (margin >= 20) marginBadge = `<span class="badge bg-success fw-bold">${margin}%</span>`;
+                            else if (margin >= 10) marginBadge = `<span class="badge bg-info text-dark fw-bold">${margin}%</span>`;
+                            else if (margin > 0) marginBadge = `<span class="badge bg-warning text-dark">${margin}%</span>`;
+                            else if (margin < 0) marginBadge = `<span class="badge bg-danger">${margin}%</span>`;
+
+                            rows.append(`
+                                <tr>
+                                    <td>
+                                        <strong class="text-white">${item.shop_name}</strong>
+                                        ${item.gst_number ? `<br><span class="small text-secondary">GST: ${item.gst_number}</span>` : ''}
+                                    </td>
+                                    <td>
+                                        <span class="text-white">${item.owner_name}</span>
+                                        <br><span class="small text-secondary">${item.mobile}</span>
+                                    </td>
+                                    <td>
+                                        <span class="small text-white fw-bold d-block">${item.route_name}</span>
+                                        <span class="small text-secondary">${item.area || item.city}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">${item.invoices_count} Inv</span>
+                                    </td>
+                                    <td class="text-end fw-bold text-white">${Number(item.total_units_bought).toLocaleString('en-IN')} pcs</td>
+                                    <td class="text-end fw-bold text-primary">${formatRupees(item.total_gross_sales)}</td>
+                                    <td class="text-end text-danger">${formatRupees(item.total_cost_of_goods)}</td>
+                                    <td class="text-end fw-bold fs-6 ${item.gross_earning >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${formatRupees(item.gross_earning)}
+                                    </td>
+                                    <td class="text-center">${marginBadge}</td>
+                                    <td class="text-end fw-bold text-info">${formatRupees(item.total_collections)}</td>
+                                </tr>
+                            `);
+                        });
+
+                        datatables['retailer_earnings'] = $('#retailer-earnings-table').DataTable({
+                            order: [[7, 'desc']],
+                            pageLength: 25,
+                            ordering: true,
+                            destroy: true,
+                            stateSave: true,
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                                { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                                { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Table', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                            ]
+                        });
+                    }
+                }
+            })
+            .fail(function () {
+                rows.html('<tr><td colspan="10" class="text-center text-danger py-4">Failed to load retailer gross earnings report.</td></tr>');
+            });
+    }
+
+    // Reports Event Handlers
+    $(document).on('click', '#btn-generate-product-report', function () {
+        loadProductGrossEarnings();
+    });
+
+    $(document).on('change', '#filter-product-report-month, #filter-product-report-id', function () {
+        loadProductGrossEarnings();
+    });
+
+    $(document).on('click', '#btn-export-product-csv', function () {
+        const month = $('#filter-product-report-month').val() || '';
+        const productId = $('#filter-product-report-id').val() || 0;
+        window.open(`api/reports.php?type=product_gross_earning&month=${month}&product_id=${productId}&format=csv`, '_blank');
+    });
+
+    $(document).on('click', '#btn-generate-retailer-report', function () {
+        loadRetailerGrossEarnings();
+    });
+
+    $(document).on('change', '#filter-retailer-report-month, #filter-retailer-report-id', function () {
+        loadRetailerGrossEarnings();
+    });
+
+    $(document).on('click', '#btn-export-retailer-csv', function () {
+        const month = $('#filter-retailer-report-month').val() || '';
+        const retailerId = $('#filter-retailer-report-id').val() || 0;
+        window.open(`api/reports.php?type=retailer_gross_earning&month=${month}&retailer_id=${retailerId}&format=csv`, '_blank');
+    });
+
+    // ----------------------------------------------------
+    // SALES RETURN & CREDIT NOTES CONTROLLER
+    // ----------------------------------------------------
+    let currentReturnInvoiceData = null;
+
+    // Open Return Modal from billing invoice list
+    $(document).on('click', '.btn-open-return-modal', function () {
+        const id = $(this).data('id');
+        $('#sales-return-form')[0].reset();
+        $('#return-modal-invoice-id').val(id);
+        $('#return-modal-date').val(new Date().toISOString().split('T')[0]);
+        $('#return-items-select-rows').html('<tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-danger spinner-border-sm me-2"></div>Loading invoice items...</td></tr>');
+        $('#lbl-return-total-units').text('0 Pcs');
+        $('#lbl-return-taxable').text('₹0.00');
+        $('#lbl-return-gst').text('₹0.00');
+        $('#lbl-return-grand').text('₹0.00');
+
+        $('#salesReturnModal').modal('show');
+
+        $.get(`api/returns.php?action=invoice_return_info&invoice_id=${id}`, function (res) {
+            if (res.status === 'success') {
+                const inv = res.data;
+                currentReturnInvoiceData = inv;
+
+                $('#return-modal-shop').text(inv.shop_name);
+                $('#return-modal-owner').text(inv.retailer_name + (inv.retailer_mobile ? ` • ${inv.retailer_mobile}` : ''));
+                $('#return-modal-inv-num').text(inv.invoice_number);
+                $('#return-modal-inv-date').text(formatDate(inv.invoice_date));
+                $('#return-modal-outstanding').text(formatRupees(inv.current_outstanding || 0));
+
+                const tbody = $('#return-items-select-rows');
+                tbody.empty();
+
+                if (!inv.items || inv.items.length === 0) {
+                    tbody.html('<tr><td colspan="8" class="text-center text-secondary py-4">No items found for this invoice.</td></tr>');
+                    return;
+                }
+
+                inv.items.forEach((item, idx) => {
+                    const avail = parseInt(item.available_return_qty || 0);
+                    const billed = parseInt(item.quantity || 0);
+                    const returned = parseInt(item.already_returned_qty || 0);
+                    const rate = parseFloat(item.selling_price || 0);
+                    const gst = parseFloat(item.gst_percentage || 0);
+
+                    const isFullyReturned = avail <= 0;
+                    const inputAttr = isFullyReturned 
+                        ? 'disabled value="0"' 
+                        : `value="0" min="0" max="${avail}"`;
+
+                    tbody.append(`
+                        <tr data-index="${idx}" class="${isFullyReturned ? 'opacity-50' : ''}">
+                            <td>
+                                <strong>${item.sku_name}</strong>
+                                <br><span class="small text-secondary">Code: ${item.sku_code}</span>
+                                <input type="hidden" class="ret-item-sku-id" value="${item.sku_id}">
+                                <input type="hidden" class="ret-item-inv-item-id" value="${item.id}">
+                                <input type="hidden" class="ret-item-price" value="${rate}">
+                                <input type="hidden" class="ret-item-gst" value="${gst}">
+                                <input type="hidden" class="ret-item-disc-unit" value="${billed > 0 ? (parseFloat(item.discount_amount || 0) / billed) : 0}">
+                            </td>
+                            <td class="text-center fw-bold">${billed}</td>
+                            <td class="text-center text-secondary">${returned}</td>
+                            <td class="text-center ${avail > 0 ? 'text-success fw-bold' : 'text-danger'}">
+                                ${avail > 0 ? `${avail} ${item.unit || 'pcs'}` : '<span class="badge bg-danger">Returned</span>'}
+                            </td>
+                            <td class="text-center">
+                                <input type="number" class="form-control form-control-sm form-control-custom text-center return-item-qty" 
+                                    style="width: 80px; margin: 0 auto;" ${inputAttr}>
+                            </td>
+                            <td class="text-end">${formatRupees(rate)}</td>
+                            <td class="text-end text-secondary">${gst}%</td>
+                            <td class="text-end fw-bold text-white ret-line-total">₹0.00</td>
+                        </tr>
+                    `);
+                });
+            } else {
+                showToast('error', res.message);
+                $('#salesReturnModal').modal('hide');
+            }
+        });
+    });
+
+    // Calculate live return totals
+    function recalculateReturnTotals() {
+        let totalUnits = 0;
+        let totalTaxable = 0;
+        let totalGst = 0;
+        let totalGrand = 0;
+
+        $('#return-items-select-rows tr').each(function () {
+            const row = $(this);
+            const qty = parseInt(row.find('.return-item-qty').val()) || 0;
+            const price = parseFloat(row.find('.ret-item-price').val()) || 0;
+            const gstPct = parseFloat(row.find('.ret-item-gst').val()) || 0;
+            const unitDisc = parseFloat(row.find('.ret-item-disc-unit').val()) || 0;
+
+            if (qty > 0) {
+                const itemDisc = unitDisc * qty;
+                const taxable = (qty * price) - itemDisc;
+                const gstAmt = taxable * (gstPct / 100);
+                const grand = taxable + gstAmt;
+
+                row.find('.ret-line-total').text(formatRupees(grand));
+
+                totalUnits += qty;
+                totalTaxable += taxable;
+                totalGst += gstAmt;
+                totalGrand += grand;
+            } else {
+                row.find('.ret-line-total').text('₹0.00');
+            }
+        });
+
+        $('#lbl-return-total-units').text(`${totalUnits} Pcs`);
+        $('#lbl-return-taxable').text(formatRupees(totalTaxable));
+        $('#lbl-return-gst').text(formatRupees(totalGst));
+        $('#lbl-return-grand').text(formatRupees(totalGrand));
+    }
+
+    $(document).on('input change', '.return-item-qty', function () {
+        const row = $(this).closest('tr');
+        const max = parseInt($(this).attr('max')) || 0;
+        let val = parseInt($(this).val()) || 0;
+
+        if (val < 0) {
+            val = 0;
+            $(this).val(0);
+        } else if (val > max) {
+            val = max;
+            $(this).val(max);
+            showToast('warning', `Maximum returnable quantity for this item is ${max}.`);
+        }
+
+        recalculateReturnTotals();
+    });
+
+    // Process Return Form Submission
+    $(document).on('submit', '#sales-return-form', function (e) {
+        e.preventDefault();
+
+        const items = [];
+        $('#return-items-select-rows tr').each(function () {
+            const row = $(this);
+            const qty = parseInt(row.find('.return-item-qty').val()) || 0;
+            if (qty > 0) {
+                items.push({
+                    sku_id: row.find('.ret-item-sku-id').val(),
+                    invoice_item_id: row.find('.ret-item-inv-item-id').val(),
+                    quantity: qty,
+                    reason: $('#return-modal-reason').val()
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            showToast('warning', 'Please specify a return quantity greater than 0 for at least one item.');
+            return;
+        }
+
+        const submitBtn = $('#btn-submit-sales-return');
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Processing...');
+
+        const payload = {
+            invoice_id: $('#return-modal-invoice-id').val(),
+            return_date: $('#return-modal-date').val(),
+            return_to_inventory: $('#return-modal-restock').is(':checked') ? 1 : 0,
+            reason: $('#return-modal-reason').val(),
+            remarks: $('#return-modal-remarks').val(),
+            items: items
+        };
+
+        $.post('api/returns.php?action=create', payload)
+            .done(function (res) {
+                if (res.status === 'success') {
+                    showToast('success', res.message);
+                    $('#salesReturnModal').modal('hide');
+
+                    // Open printable credit note directly
+                    window.open(`print_credit_note.php?id=${res.data.return_id}&autoprint=1`, '_blank');
+
+                    // Reload billing if on billing view
+                    if ($('#invoices-table').length > 0) {
+                        loadBilling();
+                    }
+                    if ($('#return-logs-table').length > 0) {
+                        loadReturnLogs();
+                    }
+                } else {
+                    showToast('error', res.message);
+                }
+            })
+            .fail(function () {
+                showToast('error', 'Network error while processing sales return.');
+            })
+            .always(function () {
+                submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Process Return &amp; Issue Credit Note');
+            });
+    });
+
+    // ----------------------------------------------------
+    // RETURN LOGS VIEW CONTROLLER
+    // ----------------------------------------------------
+    function loadReturnLogs() {
+        safeDestroyTable('#return-logs-table');
+        const rows = $('#return-logs-rows');
+        rows.html('<tr><td colspan="11" class="text-center py-4"><div class="spinner-border text-danger spinner-border-sm me-2"></div>Loading sales return logs...</td></tr>');
+
+        $.get('api/returns.php?action=list')
+            .done(function (res) {
+                if (res.status === 'success') {
+                    const data = res.data.returns || [];
+                    const summary = res.data.summary || {};
+
+                    // Update KPIs
+                    $('#kpi-total-returns').text(summary.total_returns_count || 0);
+                    $('#kpi-total-units-returned').text(`${Number(summary.total_units_returned || 0).toLocaleString('en-IN')} Units Returned`);
+                    $('#kpi-total-return-val').text(formatRupees(summary.total_returned_value || 0));
+                    $('#kpi-total-credit-notes').text(summary.total_credit_notes_count || 0);
+                    $('#kpi-total-restocked-units').text(`${Number(summary.total_units_returned || 0).toLocaleString('en-IN')} Pcs`);
+
+                    rows.empty();
+                    if (data.length === 0) {
+                        rows.html('<tr><td colspan="11" class="text-center text-secondary py-4">No sales returns recorded yet.</td></tr>');
+                    } else {
+                        data.forEach(item => {
+                            const restockedBadge = parseInt(item.return_to_inventory) === 1
+                                ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i> Restocked</span>'
+                                : '<span class="badge bg-secondary">Not Restocked</span>';
+
+                            rows.append(`
+                                <tr>
+                                    <td>
+                                        <strong class="text-danger">${item.credit_note_number}</strong>
+                                        <br><span class="small text-secondary">${item.return_number}</span>
+                                    </td>
+                                    <td>${formatDate(item.return_date)}</td>
+                                    <td>
+                                        <strong class="text-info">${item.invoice_number}</strong>
+                                        <br><span class="small text-secondary">${formatDate(item.invoice_date)}</span>
+                                    </td>
+                                    <td>
+                                        <strong class="text-white">${item.shop_name}</strong>
+                                        <br><span class="small text-secondary">${item.retailer_name} (${item.area || item.city})</span>
+                                    </td>
+                                    <td><span class="small text-white-50">${item.staff_name}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-dark border border-secondary">${item.items_count} items</span>
+                                        <div class="small text-secondary mt-1">${item.total_units_returned} pcs</div>
+                                    </td>
+                                    <td class="text-end text-secondary">${formatRupees(item.taxable_amount)}</td>
+                                    <td class="text-end text-secondary">${formatRupees(item.gst_amount)}</td>
+                                    <td class="text-end fw-bold text-danger fs-6">${formatRupees(item.total_amount)}</td>
+                                    <td class="text-center">${restockedBadge}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info view-return-details-btn" data-id="${item.id}" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="print_credit_note.php?id=${item.id}&autoprint=1" target="_blank" class="btn btn-outline-danger" title="Print Credit Note">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+
+                        datatables['return_logs'] = $('#return-logs-table').DataTable({
+                            order: [[1, 'desc']],
+                            pageLength: 15,
+                            ordering: true,
+                            destroy: true,
+                            stateSave: true,
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'excel', text: '<i class="fas fa-file-excel me-1"></i> Excel Export', className: 'btn btn-sm btn-outline-success mb-2' },
+                                { extend: 'pdf', text: '<i class="fas fa-file-pdf me-1"></i> PDF Report', className: 'btn btn-sm btn-outline-danger mb-2' },
+                                { extend: 'print', text: '<i class="fas fa-print me-1"></i> Print Registry', className: 'btn btn-sm btn-outline-secondary mb-2' }
+                            ]
+                        });
+                    }
+                }
+            })
+            .fail(function () {
+                rows.html('<tr><td colspan="11" class="text-center text-danger py-4">Failed to load return logs.</td></tr>');
+            });
+    }
+
+    // View Return Details Modal
+    $(document).on('click', '.view-return-details-btn', function () {
+        const id = $(this).data('id');
+        $.get(`api/returns.php?action=detail&id=${id}`, function (res) {
+            if (res.status === 'success') {
+                const ret = res.data;
+                $('#det-ret-shop').text(ret.shop_name);
+                $('#det-ret-name').text(ret.retailer_name + (ret.retailer_mobile ? ` • ${ret.retailer_mobile}` : ''));
+                $('#det-ret-gst').text(ret.retailer_gst || 'Unregistered');
+                $('#det-ret-cn').text(ret.credit_note_number);
+                $('#det-ret-date').text(formatDate(ret.return_date));
+                $('#det-ret-inv').text(ret.invoice_number);
+
+                $('#det-ret-remarks').text(ret.reason + (ret.remarks ? ` - ${ret.remarks}` : ''));
+                $('#det-ret-taxable').text(formatRupees(ret.taxable_amount));
+                $('#det-ret-gstamt').text(formatRupees(ret.gst_amount));
+                $('#det-ret-total').text(formatRupees(ret.total_amount));
+                $('#btn-print-credit-note-modal').attr('href', `print_credit_note.php?id=${ret.id}&autoprint=1`);
+
+                const tbody = $('#return-detail-items-rows');
+                tbody.empty();
+                (ret.items || []).forEach(item => {
+                    tbody.append(`
+                        <tr>
+                            <td><strong>${item.sku_name}</strong></td>
+                            <td><code>${item.sku_code}</code></td>
+                            <td class="text-end fw-bold">${item.quantity} ${item.unit || 'pcs'}</td>
+                            <td class="text-end">${formatRupees(item.selling_price)}</td>
+                            <td class="text-end text-success">${formatRupees(item.discount_amount)}</td>
+                            <td class="text-end">${item.gst_percentage}%</td>
+                            <td class="text-end fw-bold text-danger">${formatRupees(item.total_amount)}</td>
+                            <td><span class="small text-secondary">${item.reason}</span></td>
+                        </tr>
+                    `);
+                });
+
+                $('#returnDetailModal').modal('show');
+            } else {
+                showToast('error', res.message);
+            }
+        });
     });
 
 });

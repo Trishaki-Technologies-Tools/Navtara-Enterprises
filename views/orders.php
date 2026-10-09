@@ -13,10 +13,51 @@ $roleName = $_SESSION['role_name'];
     </div>
 </div>
 
+<!-- Sales Orders Summary Metrics Grid -->
+<div class="metrics-grid mb-4">
+    <div class="metric-card primary">
+        <div class="metric-info">
+            <span class="label">Daily Sales</span>
+            <h3 class="value" id="card-orders-daily-sales">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-calendar-day"></i></div>
+    </div>
+    <div class="metric-card info">
+        <div class="metric-info">
+            <span class="label">Monthly Sales</span>
+            <h3 class="value" id="card-orders-monthly-sales">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-calendar-alt"></i></div>
+    </div>
+    <div class="metric-card success">
+        <div class="metric-info">
+            <span class="label">Overall Sales</span>
+            <h3 class="value" id="card-orders-overall-sales">₹0.00</h3>
+        </div>
+        <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
+    </div>
+    <div class="metric-card warning" id="card-orders-pending-filter" style="cursor: pointer; transition: all 0.2s ease;" title="Click to filter Pending Orders">
+        <div class="metric-info">
+            <span class="label">Pending Orders</span>
+            <h3 class="value text-warning" id="card-orders-pending-count">0</h3>
+            <span class="small text-secondary d-block mt-1" id="card-orders-pending-subtext" style="font-size: 0.75rem;"><i class="fas fa-filter me-1"></i>Click to show pending</span>
+        </div>
+        <div class="metric-icon" style="color: #f59e0b; background: rgba(245, 158, 11, 0.15);"><i class="fas fa-clock"></i></div>
+    </div>
+</div>
+
 <div class="custom-card">
-    <div class="custom-card-header d-flex justify-content-between align-items-center">
+    <div class="custom-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h5 class="custom-card-title mb-0"><i class="fas fa-shopping-bag text-primary"></i> Order List</h5>
         <div class="d-flex align-items-center gap-2">
+            <select class="form-select form-control-custom form-select-sm" id="filter-order-status" style="width: auto;">
+                <option value="all">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Processing">Processing</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
             <select class="form-select form-control-custom form-select-sm dt-date-filter" data-table="orders" style="width: auto;">
                 <option value="all">All Dates</option>
                 <option value="today">Today</option>
